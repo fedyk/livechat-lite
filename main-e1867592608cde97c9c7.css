@@ -536,42 +536,49 @@ button.dropdown-item {
 .composer {
   position: relative;
   border-top: 1px solid var(--border-color);
-  /* background-color: var(--active-bg-color); */
   flex: 0 0 48px;
 }
 
-.composer-input-container {
+.composer-container {
   position: relative;
   height: 100%;
+  display: flex;
 }
 
-input.composer-input {
+.composer-input-container {
+  flex: 1;
+}
+
+.composer-input {
+  position: relative;
   display: block;
   width: 100%;
-  height: 100%;
-  padding: 1px 14px 0;
+  padding: 11px 48px 13px 14px;
+  margin: 0;
   border: none;
+  resize: none;
+  outline: none;
   background: none;
-  font-size: 1rem;
-  line-height: 0;
   color: var(--main-text-color);
-  transition: background-color 0.1s linear;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
 }
 
-input.composer-input:focus {
+.composer-input:focus {
   border: none;
   outline: none;
 }
 
-button.composer-send {
+.composer-send {
   position: absolute;
   right: 0;
-  top: 0;
   bottom: 0;
+  height: 48px;
+  width: 48px;
+  padding: 0;
   border: none;
   background: none;
-  padding: 0 14px;
-  line-height: 1.5;
   color: var(--second-text-color);
   transition: color 0.1s linear;
   cursor: pointer;
@@ -1119,3 +1126,4 @@ svg.message-meta-check2-all {
   opacity: 0.5;
   visibility: visible;
 }
+
