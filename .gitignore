@@ -1,4 +1,4 @@
-js/
-node_modules/
-.publish/
+dist
+gh-pages
+node_modules
 .DS_Store

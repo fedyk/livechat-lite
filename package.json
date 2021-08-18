@@ -1,13 +1,12 @@
 {
-  "name": "livechat-x",
+  "private": true,
   "version": "0.2.1",
-  "description": "Unofficial agent client for LiveChat",
-  "main": "index.js",
   "scripts": {
-    "watch": "tsc --watch --preserveWatchOutput",
-    "release": "scripts/release.js",
-    "version": "scripts/sync-version.js",
-    "postversion": "git push && git push --tags"
+    "start": "webpack serve --mode development",
+    "build": "webpack --mode production",
+    "watch": "webpack watch --mode development",
+    "gh-publish": "scripts/gh-publish.js",
+    "version": "scripts/sync-version.js"
   },
   "repository": {
     "type": "git",
@@ -15,11 +14,15 @@
   },
   "author": "Andrii Fedyk <github.com/fedyk>",
   "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/fedyk/livechat-x/issues"
-  },
   "dependencies": {},
   "devDependencies": {
-    "typescript": "^4.1.5"
+    "css-loader": "^6.2.0",
+    "html-webpack-plugin": "^5.3.2",
+    "mini-css-extract-plugin": "^2.2.0",
+    "ts-loader": "^9.2.5",
+    "typescript": "^4.1.5",
+    "webpack": "^5.50.0",
+    "webpack-cli": "^4.8.0",
+    "webpack-dev-server": "^3.11.2"
   }
 }
