@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiveChat Lite</title>
+  <link rel="icon" href="/favicon.svg?version=3">
+  <link rel="stylesheet" href="/css/styles.css">
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
+</head>
+
+<body>
+  <div id="app" class="app"></div>
+
+  <script type="module">
+    import("./js/index.js")
+      .then(function (m) {
+        return m.initApp({
+          clientId: "b71bb162a2aaebf04bdc4abcb91632ae",
+          redirectUrl: "http://localhost:9090"
+        }).bootstrap()
+      })
+      .catch(function (err) {
+        console.error(err)
+      })
+  </script>
+</body>
+
+</html>

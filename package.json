@@ -1,0 +1,20 @@
+{
+  "private": true,
+  "type": "module",
+  "version": "0.0.13",
+  "scripts": {
+    "start": "node js/server/index.js",
+    "dev": "nodemon --inspect --watch js/server --signal SIGHUP js/server/index.js",
+    "watch": "tsc --watch",
+    "build": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fedyk/livechat-x.git"
+  },
+  "author": "Andrii Fedyk <github.com/fedyk>",
+  "license": "ISC",
+  "dependencies": {
+    "typescript": "^5.4.5"
+  }
+}
