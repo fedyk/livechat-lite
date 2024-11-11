@@ -20,7 +20,7 @@
       .then(function (m) {
         return m.initApp({
           clientId: "b71bb162a2aaebf04bdc4abcb91632ae",
-          redirectUrl: "http://localhost:9090"
+          redirectUrl: window.location.origin,
         }).bootstrap()
       })
       .catch(function (err) {
