@@ -1745,9 +1745,7 @@ export function createController(options: ControllerOptions) {
       status: "pending"
     })
 
-    const accessToken = await getAccessToken()
-
-    api.parseUserAgent(accessToken, { user_agent: userAgent })
+    api.parseUserAgent({ user_agent: userAgent })
       .then(function (parsedUserAgent) {
         set({
           status: "done",
@@ -1797,7 +1795,10 @@ export function createController(options: ControllerOptions) {
         return nextState.credentials.access_token
       }
 
-      credentials = await api.refreshToken({ refresh_token: credentials.refresh_token })
+      credentials = await api.token({
+        grant_type: "refresh_token",
+        refresh_token: credentials.refresh_token
+      })
 
       store.dispatch({ credentials })
 

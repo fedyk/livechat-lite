@@ -7,6 +7,7 @@ import { ColorMode, ColorScheme, Credentials } from "./types.js"
 import { $CommandsController, createCommandsController } from "./commands.js"
 import { createUnsubscribers, getStateFromLocalStore, setStateToLocalStore } from "./helpers.js"
 import { $ChatRouter, ChatRouter, createColorSchemaWatcher, initNotifications } from "./services.js"
+import { api } from "./api.js"
 
 interface Options {
   clientId: string
@@ -57,15 +58,22 @@ export function initApp(p: Options) {
     store.dispose()
   }
 
-  function bootstrap() {
-    const locationHash = String(window.location.hash ?? "")
+  async function bootstrap() {
     const state = store.getState()
+    const query = parseQueryParams(window.location.search)
     let credentials = state.credentials
 
-    if (locationHash.length > 0) {
-      credentials = parseCredentialsFromQuery(locationHash)
+    if (query.code) {
+      /**
+       * @todo restore original url from state
+       */
+      history.replaceState("", document.title, window.location.pathname)
 
-      history.replaceState("", document.title, window.location.pathname + window.location.search)
+      credentials = await api.token({
+        grant_type: "authorization_code",
+        code: query.code,
+        redirect_uri: options.redirectUrl,
+      })
     }
 
     if (!credentials) {
@@ -120,25 +128,6 @@ function parseOptions(options: Options) {
   return options
 }
 
-function parseQueryParams(query: string) {
-  if (query.startsWith("?")) {
-    query = query.substring(1)
-  }
-
-  if (query.startsWith("#")) {
-    query = query.substring(1)
-  }
-
-  const params = new URLSearchParams(query)
-  const values: Record<string, string> = {}
-
-  for (const [key, value] of params.entries()) {
-    values[key] = value
-  }
-
-  return values
-}
-
 function parseCredentialsFromQuery(query: any): Credentials | null {
   if (query.startsWith("?")) {
     query = query.substring(1)
@@ -183,4 +172,23 @@ function parseCredentialsFromQuery(query: any): Credentials | null {
     expired_at,
     scopes,
   }
+}
+
+function parseQueryParams(query: string) {
+  if (query.startsWith("?")) {
+    query = query.substring(1)
+  }
+
+  if (query.startsWith("#")) {
+    query = query.substring(1)
+  }
+
+  const params = new URLSearchParams(query)
+  const values: Record<string, string> = {}
+
+  for (const [key, value] of params.entries()) {
+    values[key] = value
+  }
+
+  return values
 }

@@ -166,16 +166,19 @@ export class LRUCache<T> extends TypedEventEmitter<LRUCacheEvents<T>> {
       this.cache.delete(key);
     }
     // kill the oldest
-    
+
     else if (this.cache.size == this.max) {
       const key = this.first()
-      const item = this.cache.get(key)
 
-      if (item) {
-        this.emit("removed", item)
+      if (key) {
+        const item = this.cache.get(key)
+
+        if (item) {
+          this.emit("removed", item)
+        }
+
+        this.cache.delete(key);
       }
-
-      this.cache.delete(key);
     }
 
     this.cache.set(key, val);
@@ -646,7 +649,7 @@ export function cx(...args: any[]) {
 
 export function getInitials(name: string, defaultInitials = "?") {
   let regex = new RegExp(/(\p{L}{1})\p{L}+/, 'gu');
-  let initials= [...(name.matchAll(regex) || [])]
+  let initials = [...(name.matchAll(regex) || [])]
   let result = ((initials.shift()?.[1] || '') + (initials.pop()?.[1] || '')).toUpperCase()
 
   if (result.length === 0) {
