@@ -3,8 +3,9 @@
   "type": "module",
   "version": "0.0.13",
   "scripts": {
+    "all": "node-run-all \"npm run dev\" \"npm run watch\"",
     "start": "node js/server/index.js",
-    "dev": "nodemon --inspect --watch js/server --signal SIGHUP js/server/index.js",
+    "dev": "python3 -m http.server 9090",
     "watch": "tsc --watch",
     "build": "tsc"
   },
@@ -15,6 +16,7 @@
   "author": "Andrii Fedyk <github.com/fedyk>",
   "license": "ISC",
   "dependencies": {
+    "node-run-all": "^1.1.0",
     "typescript": "^5.4.5"
   }
 }

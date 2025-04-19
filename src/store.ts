@@ -67,6 +67,8 @@ export interface State {
 
   colorMode: t.ColorMode
   openModal: t.Modal | null
+
+  showDetailsSection: boolean
 }
 
 export type ChatListsIds = Pick<State,
@@ -137,6 +139,7 @@ export function createStore(initialState: Pick<State, "credentials" | "searchRec
     parsedUserAgents: {},
     colorMode: "auto",
     openModal: null,
+    showDetailsSection: true,
     ...initialState
   }
 

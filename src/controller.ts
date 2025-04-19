@@ -38,40 +38,41 @@ export function createController(options: ControllerOptions) {
   return {
     chatSearchInputRef,
     visibleChatViewRef,
-    dispose,
-    connect,
-    logout,
-    startChat,
-    selectChat,
-    sendTextMessage,
-    sendFileMessage,
-    deactivateChat,
-    transferChat,
     assignChatToMe,
-    unpinChat,
+    cancelSearch,
+    connect,
+    deactivateChat,
+    deleteRecentSearchQuery,
+    dispose,
+    getCurrentChatRoute,
+    logout,
+    maybeLoadMoreArchivedChats,
+    maybeLoadMoreInactiveChats,
+    maybeLoadMorePinnedChats,
+    maybeMarkEventsAsSeen,
+    maybeParseUserAgent,
+    maybeSyncArchivedChats,
+    maybeSyncChatGap,
+    maybeSyncInactiveChats,
+    maybeSyncPinnedChats,
     pickChatFromQueue,
+    search,
+    selectChat,
+    selectedChatFolder,
+    selectSearchResult,
+    sendFileMessage,
+    sendTextMessage,
+    setRoutingStatus,
+    startChat,
     startSuperviseChat,
-    takeOverChat,
     syncAgents,
     syncGroups,
-    setRoutingStatus,
+    takeOverChat,
+    toggleDetailsSection,
     toggleRoutingStatus,
-    selectedChatFolder,
-    maybeSyncPinnedChats,
-    maybeLoadMorePinnedChats,
-    maybeSyncArchivedChats,
-    maybeLoadMoreArchivedChats,
-    maybeSyncInactiveChats,
-    maybeLoadMoreInactiveChats,
-    maybeSyncChatGap,
-    maybeMarkEventsAsSeen,
-    getCurrentChatRoute,
-    search,
-    cancelSearch,
+    transferChat,
+    unpinChat,
     updateAndFocusChatSearchInput,
-    selectSearchResult,
-    deleteRecentSearchQuery,
-    maybeParseUserAgent
   }
 
   function dispose() {
@@ -1056,6 +1057,14 @@ export function createController(options: ControllerOptions) {
       .catch(function (err) {
         console.error("fail to mark events as seen", err)
       })
+  }
+
+  function toggleDetailsSection() {
+    store.dispatch(function (state) {
+      return {
+        showDetailsSection: !state.showDetailsSection
+      }
+    })
   }
 
   function toggleRoutingStatus() {

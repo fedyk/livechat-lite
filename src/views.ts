@@ -1317,9 +1317,8 @@ interface ChatHeaderView {
 
 function createChatHeaderView(props: {
   chatId: string
-  ref: dom.Ref<ChatHeaderView>
-}) {
-  const commands = $CommandsController()
+  ref: dom.Ref<ChatHeaderView>,
+}, controller = $Controller(), commands = $CommandsController()) {
   let el: HTMLDivElement
   let headerAvatarEl: HTMLDivElement
   let headerAvatar: AvatarView | null = null
@@ -1334,11 +1333,17 @@ function createChatHeaderView(props: {
       h("div", { className: "chat-header-more-button" },
         h("button", {
           className: "chat-header-more-label",
-          textContent: "More",
+          onclick() {
+            controller.toggleDetailsSection()
+          }
+        }, "Details"),
+
+        h("button", {
+          className: "chat-header-more-label",
           onclick() {
             commands.show()
           }
-        })
+        }, "More")
       ),
     )
   )
@@ -2832,7 +2837,7 @@ function createCustomerDetailsView(props: DetailsViewProps): CustomerDetailsView
   const detailsElRef = dom.createRef<HTMLDivElement>()
   const el = h("div", { className: "details" },
     h("div", { className: "details-header" },
-      h("div", { className: "details-title", textContent: "Details" })
+      h("div", { className: "details-title" }, "Details")
     ),
     h("div", { className: "details-body" },
       h("div", { className: "d-flex p-2 px-3 border-bottom" },
@@ -2859,10 +2864,10 @@ function createCustomerDetailsView(props: DetailsViewProps): CustomerDetailsView
     const chat = state.chats.get(props.chatId)
     const customer = chat ? helpers.getChatRecipient(chat.users) : void 0
 
-
     return {
       user: customer,
       parsedUserAgents: state.parsedUserAgents,
+      showDetailsSection: state.showDetailsSection
     }
   }, function (props) {
     const user = props.user
@@ -2954,6 +2959,8 @@ function createCustomerDetailsView(props: DetailsViewProps): CustomerDetailsView
     if (detailsElRef.current) {
       renderDetailsItems(detailsElRef.current, details)
     }
+
+    dom.toggleEl(el, props.showDetailsSection)
   })
 
   return props.ref.current = {
