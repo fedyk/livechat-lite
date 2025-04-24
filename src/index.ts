@@ -44,6 +44,7 @@ export function initApp(p: Options) {
       credentials: state.credentials,
       searchRecentQueries: state.searchRecentQueries,
       colorMode: state.colorMode,
+      showDetailsSection: state.showDetailsSection,
     }
   }, setStateToLocalStore))
 

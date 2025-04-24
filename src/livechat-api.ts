@@ -3104,7 +3104,6 @@ export namespace accounts {
   }
 }
 
-
 function getRegion(accessToken: string) {
   return accessToken?.split(":")[0] || "dal"
 }

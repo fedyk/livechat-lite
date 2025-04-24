@@ -71,6 +71,8 @@ export interface State {
   showDetailsSection: boolean
 }
 
+export type PersistentState = Pick<State, "myProfile" | "credentials" | "searchRecentQueries" | "colorMode" | "showDetailsSection">
+
 export type ChatListsIds = Pick<State,
   | "myChatIds"
   | "supervisedChatIds"

@@ -67,6 +67,7 @@ export function createController(options: ControllerOptions) {
     startSuperviseChat,
     syncAgents,
     syncGroups,
+    maybeSyncGroups,
     takeOverChat,
     toggleDetailsSection,
     toggleRoutingStatus,
@@ -1634,6 +1635,16 @@ export function createController(options: ControllerOptions) {
     return v35.conf.listGroups(accessToken, { fields: ["routing_status"] }).then(function (groups) {
       store.dispatch({ groups })
     })
+  }
+
+  async function maybeSyncGroups() {
+    const { groups } = store.getState()
+
+    if (groups.length > 1) {
+      return
+    }
+
+    return syncGroups()
   }
 
   async function search(query: string) {

@@ -2865,9 +2865,11 @@ function createCustomerDetailsView(props: DetailsViewProps): CustomerDetailsView
     const customer = chat ? helpers.getChatRecipient(chat.users) : void 0
 
     return {
+      chat,
       user: customer,
       parsedUserAgents: state.parsedUserAgents,
-      showDetailsSection: state.showDetailsSection
+      showDetailsSection: state.showDetailsSection,
+      groups: state.groups,
     }
   }, function (props) {
     const user = props.user
@@ -2887,6 +2889,18 @@ function createCustomerDetailsView(props: DetailsViewProps): CustomerDetailsView
 
     if (user && avatarViewRef.current) {
       avatarViewRef.current.update({ id: user.id, size: 48, alt: user.name, src: user.avatar })
+    }
+
+    if (props.chat) {
+      const groups = new Map(props.groups.map(g => [g.id, g]))
+      const groupsNames = props.chat.access.group_ids.map(function (groupId) {
+        return groups.get(groupId)?.name || `Group ${groupId}`
+      })
+
+      details.push({
+        name: "Group",
+        value: groupsNames.join(", ")
+      })
     }
 
     if (geolocation) {
@@ -2962,6 +2976,8 @@ function createCustomerDetailsView(props: DetailsViewProps): CustomerDetailsView
 
     dom.toggleEl(el, props.showDetailsSection)
   })
+
+  controller.maybeSyncGroups()
 
   return props.ref.current = {
     el,

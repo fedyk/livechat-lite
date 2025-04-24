@@ -1,6 +1,6 @@
 import type { Unsubscriber } from "./types.js";
 import { v35 } from "./livechat-api.js";
-import { State } from "./store.js";
+import { PersistentState, State } from "./store.js";
 import { ChatEntity, ChatRoute, SearchResult, SneakPeekAsEvent } from "./types.js"
 
 export function createUnsubscribers(...unsubscribers: Unsubscriber[]) {
@@ -648,7 +648,7 @@ export function cx(...args: any[]) {
 }
 
 export function getInitials(name: string, defaultInitials = "?") {
-  let regex = new RegExp(/(\p{L}{1})\p{L}+/, 'gu');
+  let regex = new RegExp(/(\p{L}{1})\p{L}+/u, 'g');
   let initials = [...(name.matchAll(regex) || [])]
   let result = ((initials.shift()?.[1] || '') + (initials.pop()?.[1] || '')).toUpperCase()
 
@@ -1387,14 +1387,14 @@ export function getSearchResults(chats: v35.agent.Chat[], highlightTag: string):
   return results
 }
 
-
-export function getStateFromLocalStore(): Pick<State, "myProfile" | "credentials" | "searchRecentQueries" | "colorMode"> {
+export function getStateFromLocalStore(): PersistentState {
   const item = localStorage.getItem("state")
-  const state: Pick<State, "myProfile" | "credentials" | "searchRecentQueries" | "colorMode"> = {
+  const state: PersistentState = {
     myProfile: null,
     credentials: null,
     searchRecentQueries: [],
-    colorMode: "auto"
+    colorMode: "auto",
+    showDetailsSection: true,
   }
 
   if (!item) {
@@ -1435,34 +1435,20 @@ export function getStateFromLocalStore(): Pick<State, "myProfile" | "credentials
     }
   }
 
+  if ("showDetailsSection" in data) {
+    state.showDetailsSection = Boolean(data.showDetailsSection)
+  }
+
   return state
 }
 
-export function setStateToLocalStore(state: Pick<State, "credentials" | "myProfile" | "searchRecentQueries" | "colorMode">) {
-  const result: Record<"myProfile" | "credentials" | "searchRecentQueries" | "colorMode", any> = {
-    myProfile: null,
+export function setStateToLocalStore(state: PersistentState) {
+  const result: Record<keyof PersistentState, any> = {
+    myProfile: state.myProfile,
     credentials: null,
-    searchRecentQueries: [],
-    colorMode: "auto"
-  }
-
-  if (state.searchRecentQueries) {
-    result.searchRecentQueries = state.searchRecentQueries
-  }
-
-  if (state.colorMode) {
-    result.colorMode = state.colorMode
-  }
-
-  if (state.myProfile) {
-    result.myProfile = {
-      id: state.myProfile.id,
-      name: state.myProfile.name,
-      email: state.myProfile.email,
-      avatar: state.myProfile.avatar,
-      permission: state.myProfile.permission,
-      routing_status: state.myProfile.routing_status,
-    }
+    searchRecentQueries: state.searchRecentQueries || [],
+    colorMode: state.colorMode,
+    showDetailsSection: state.showDetailsSection,
   }
 
   if (state.credentials) {
@@ -1489,4 +1475,32 @@ export function go<T>(promise: Promise<T>) {
     .catch(function (err) {
       return [err, null] as const
     })
+}
+
+export function sortGroups(groups: v35.conf.Group[]) {
+  return groups.concat().sort(function (a, b) {
+    return a.id === 0 ? -1 : b.id === 0 ? 1 : (getRoutingStatusRang(b.routing_status) - getRoutingStatusRang(a.routing_status)) || a.name.localeCompare(b.name)
+  })
+}
+
+export function sortAgents(agents: v35.conf.Agent[], routingStatuses: Map<string, v35.agent.RoutingStatus>) {
+  return agents.concat().sort(function (a, b) {
+      const aStatus = routingStatuses.get(a.id)
+      const bStatus = routingStatuses.get(b.id)
+
+      return (getRoutingStatusRang(bStatus) - getRoutingStatusRang(aStatus)) || a.name.localeCompare(b.name)
+    })
+}
+
+export function getRoutingStatusRang(status: v35.agent.RoutingStatus | undefined) {
+  switch (status) {
+    case "accepting_chats":
+      return 3;
+    case "not_accepting_chats":
+      return 2;
+    case "offline":
+      return 1;
+    default:
+      return 0;
+  }
 }

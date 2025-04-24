@@ -1,6 +1,6 @@
 import { $Controller } from "./controller.js";
 import { createElement } from "./dom.js";
-import { createInjector } from "./helpers.js";
+import { createInjector, sortAgents, sortGroups } from "./helpers.js";
 import { list2 } from "./list.js";
 import { v35 } from "./livechat-api.js";
 import { $Store } from "./store.js";
@@ -419,9 +419,11 @@ function createTransferCommand(chatId: string): ICommand {
   async function select() {
     return Promise.all([
       controller.syncAgents(),
-      controller.syncGroups()
+      controller.maybeSyncGroups()
     ]).then(function () {
-      const { agents, groups } = store.getState()
+      const state = store.getState()
+      const agents = sortAgents(state.agents, state.routingStatuses)
+      const groups = sortGroups(state.groups)
 
       return new Array<ICommand>().concat(
         agents.map(function (agent) {
