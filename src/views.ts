@@ -2823,11 +2823,6 @@ interface DetailsItem {
   value: string
 }
 
-interface DetailsItemsListInstance {
-  nameElRef: dom.Ref<HTMLDivElement>
-  valueElRef: dom.Ref<HTMLDivElement>
-}
-
 function createCustomerDetailsView(props: DetailsViewProps): CustomerDetailsView {
   const store = $Store()
   const controller = $Controller()
@@ -3021,8 +3016,14 @@ function createCustomerDetailsView(props: DetailsViewProps): CustomerDetailsView
         ctx.valueElRef = dom.createRef<HTMLDivElement>()
 
         ctx.el = h("div", { className: "p-2 px-3 border-bottom" },
-          h("small", { className: "text-secondary", ref: ctx.nameElRef }, ctx.value.name),
-          h("div", { className: "text-primary", ref: ctx.valueElRef }, ctx.value.value),
+          h("small", {
+            className: "text-secondary break-word",
+            ref: ctx.nameElRef
+          }, ctx.value.name),
+          h("div", {
+            className: "text-primary break-word",
+            ref: ctx.valueElRef
+          }, ctx.value.value),
         )
       },
       update(ctx) {

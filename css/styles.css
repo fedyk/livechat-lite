@@ -138,6 +138,11 @@ input:focus {
   }
 }
 
+.break-word {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
 .hidden {
   display: none !important;
 }
