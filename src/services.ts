@@ -424,21 +424,18 @@ export namespace ReverseScroll {
   }
 
   const scrolls = new Map<Element, ReverseScroll>()
-  const resizeObserver = new ResizeObserver(resizeObserverCallback)
+  const resizeObserver = new ResizeObserver(onResize)
 
-  export function create(scrollEl: HTMLElement, contentContainerEl: HTMLElement): ReverseScroll {
+  export function create(scrollEl: HTMLElement, contentEl: HTMLElement): ReverseScroll {
     let isStickyToBottom = true
     let isStickyToCurrent = false
     let previousScrollTop = 0
     let previousScrollHeight = 0
-    let previousClientHeight = 0
     let timerId = 0
 
     scrollEl.addEventListener("scroll", onScroll, {
       passive: true
     })
-
-    scrollEl.addEventListener("dblclick", onDblClick)
 
     const self: ReverseScroll = {
       get isStickyToBottom() {
@@ -453,17 +450,16 @@ export namespace ReverseScroll {
       scrollToCurrent,
     }
 
-    scrolls.set(contentContainerEl, self)
+    scrolls.set(contentEl, self)
 
-    resizeObserver.observe(contentContainerEl)
+    resizeObserver.observe(contentEl)
 
     return self
 
     function dispose() {
       scrollEl.removeEventListener("scroll", onScroll)
-      scrollEl.removeEventListener("dblclick", onDblClick)
-      scrolls.delete(contentContainerEl)
-      resizeObserver.unobserve(contentContainerEl)
+      scrolls.delete(contentEl)
+      resizeObserver.unobserve(contentEl)
       clearTimeout(timerId)
     }
 
@@ -473,11 +469,9 @@ export namespace ReverseScroll {
     }
 
     function checkScrollPosition() {
-      isStickyToBottom = scrollEl.scrollTop === scrollEl.scrollHeight - scrollEl.clientHeight
-    }
+      const scrollTop = Math.floor(scrollEl.scrollTop)
 
-    function onDblClick() {
-      console.log("reverse scroll params ", { isStickyToBottom, isStickyToCurrent, previousScrollTop, previousScrollHeight, previousClientHeight })
+      isStickyToBottom = scrollTop >= scrollEl.scrollHeight - scrollEl.clientHeight
     }
 
     function scrollToBottom() {
@@ -498,7 +492,7 @@ export namespace ReverseScroll {
     }
   }
 
-  function resizeObserverCallback(entries: ResizeObserverEntry[]) {
+  function onResize(entries: ResizeObserverEntry[]) {
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i];
       const reverseScroll = scrolls.get(entry.target)
