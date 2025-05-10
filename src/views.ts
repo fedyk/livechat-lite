@@ -2291,12 +2291,22 @@ function createFileMessageView(props: MessageViewProps<v35.agent.FileEvent>): Me
   }
 
   if (["image/png", "image/jpg", "image/jpeg", "image/gif"].includes(props.message.content_type)) {
-    el.append(h("div", { className: "message-image-container" },
-      h("img", {
-        className: "message-image",
-        src: props.message.thumbnail2x_url,
-        alt: props.message.name,
-      }),
+    const width = 280
+    let height = 300
+
+    if (typeof props.message.width === "number" && typeof props.message.height === "number") {
+      height = width * props.message.height / props.message.width
+    }
+
+    el.append(h("div", {
+      className: "message-image-container"
+    }, h("img", {
+      className: "message-image",
+      src: props.message.thumbnail2x_url,
+      alt: props.message.name,
+      width,
+      height,
+    }),
       createMessageIndicatorView({
         sticky: true,
         contrast: true,
