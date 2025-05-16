@@ -1816,6 +1816,12 @@ function createComposerView(props: {
       sendButtonRef.current = null!
     }
 
+    if (fileInputRef.current) {
+      fileInputRef.current.onchange = null!
+      fileInputRef.current.onpaste = null!
+      fileInputRef.current = null!
+    }
+
     el.remove()
   }
 

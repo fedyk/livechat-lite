@@ -35,6 +35,8 @@ export function createController(options: ControllerOptions) {
   let reconnectTimerId: number
   let rtm: v35.agent.RTM
 
+  document.addEventListener("paste", onPaste)
+
   return {
     chatSearchInputRef,
     visibleChatViewRef,
@@ -77,6 +79,7 @@ export function createController(options: ControllerOptions) {
   }
 
   function dispose() {
+    document.removeEventListener("paste", onPaste)
     rtm?.close()
     chatUserFinder.dispose()
     chatRouteListener()
@@ -1827,5 +1830,37 @@ export function createController(options: ControllerOptions) {
     finally {
       lock.release()
     }
+  }
+
+  async function onPaste(event: ClipboardEvent) {
+    const state = store.getState()
+
+    if (!state.selectedChatId) {
+      return
+    }
+
+    if (!event.clipboardData?.files) {
+      return
+    }
+
+    if (event.clipboardData.files.length === 0) {
+      return
+    }
+
+    event.preventDefault()
+
+    const files = Array.from(event.clipboardData.files)
+
+    if (files.length === 0) {
+      return
+    }
+
+    store.dispatch({
+      openModal: {
+        type: "file-upload-modal",
+        chatId: state.selectedChatId,
+        files
+      }
+    })
   }
 }
