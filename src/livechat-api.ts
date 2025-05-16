@@ -2075,7 +2075,7 @@ export namespace v35 {
             created_at: parseDate(event.created_at),
             type: "file",
             name: String(event.name || ""),
-            url: String(event.name || ""),
+            url: String(event.url || ""),
             thumbnail_url: String(event.thumbnail_url || ""),
             thumbnail2x_url: String(event.thumbnail2x_url || ""),
             content_type: String(event.content_type || ""),

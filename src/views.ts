@@ -2333,6 +2333,42 @@ function createFileMessageView(props: MessageViewProps<v35.agent.FileEvent>): Me
       )
     ))
   }
+  else if (props.message.content_type.startsWith("video/")) {
+    el.append(h("div", {
+      className: "message-image-container"
+    },
+      h("video", {
+        className: "message-video",
+        width: 280,
+        height: 280,
+        controls: true,
+      },
+        h("source", {
+          type: props.message.content_type,
+          src: props.message.url,
+        }),
+        h("p", {}, "Your browser does not support the video. ", h("a", { href: props.message.url, download: props.message.name }, "Download")),
+      ),
+      createMessageIndicatorView({
+        sticky: true,
+        contrast: true,
+        time: helpers.formatTime(props.message.created_at),
+        status: props.messageStatus,
+        isMessageSeen: props.isMessageSeen,
+        ref: messageIndicatorRef
+      }).el,
+      h("div", { className: "message-image-progress-container", ref: imageProgressContainer },
+        createProgressButton({
+          ref: progressButtonRef,
+          progress: 0,
+          size: 48,
+          onClick() {
+            props.abortController?.abort()
+          }
+        }).el
+      )
+    ))
+  }
   else {
     el.append(
       h("div", { className: "message-bubble" },

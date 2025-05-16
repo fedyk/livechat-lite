@@ -1140,6 +1140,10 @@ button.composer-send:focus {
   max-width: 100%;
 }
 
+.message-video {
+  width: 100%;
+}
+
 .message-image-progress-container {
   position: absolute;
   display: flex;
