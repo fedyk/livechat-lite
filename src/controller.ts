@@ -126,12 +126,14 @@ export function createController(options: ControllerOptions) {
   }
 
   async function openConnection() {
+    let state = store.getState()
     const accessToken = await getAccessToken()
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const organization_id = state.credentials?.organization_id ?? ""
 
     store.dispatch({ networkStatus: "connecting" })
 
-    const resp = await v35.agent.createRTM({
+    const resp = await v35.agent.createRTM(organization_id, {
       token: `Bearer ${accessToken}`,
       timezone,
       customer_monitoring_level: "my",
@@ -142,7 +144,8 @@ export function createController(options: ControllerOptions) {
       },
     })
 
-    const state = store.getState()
+    state = store.getState()
+
     const chatIds = helpers.unique(Object.keys(state.chats), resp.initState.chats_summary.map(c => c.id))
     const transitions = startChatTransitions(chatIds)
 

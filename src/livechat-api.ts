@@ -1450,10 +1450,8 @@ export namespace v35 {
       error: ErrorWithType
     }
 
-    export async function createRTM(options: Login["request"]) {
-      const region = getRegion(getAccessToken(options.token))
-      const host = region === "dal" ? "api.livechatinc.com" : `api-${region}.livechatinc.com`
-      const url = `wss://${host}/v3.5/agent/rtm/ws`
+    export async function createRTM(organization_id: string, options: Login["request"]) {
+      const url = `wss://api.livechatinc.com/v3.5/agent/rtm/ws?organization_id=${organization_id}`
       const ws = await openWebSocket(url)
       const requests = new Map<string, RTMRequest>()
       const pingTimeout = 10000
@@ -3106,10 +3104,6 @@ export namespace accounts {
 
 function getRegion(accessToken: string) {
   return accessToken?.split(":")[0] || "dal"
-}
-
-function getAccessToken(token: string) {
-  return String(token).replace("Bearer", "").trim()
 }
 
 function getRequestHeaders(accessToken: string) {
