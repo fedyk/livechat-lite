@@ -902,6 +902,7 @@ button.composer-send:focus {
 
 .chat-quick-action {
   display: block;
+  flex: 1;
   border: none;
   background: none;
   color: var(--tint-color);
@@ -932,6 +933,7 @@ button.composer-send:focus {
   max-width: 540px;
   justify-content: center;
   text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .message.right {
