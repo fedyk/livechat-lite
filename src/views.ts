@@ -999,6 +999,8 @@ class ChatsListItemView {
   chatRouteListener: Unsubscriber
   connectedProps?: ChatsListItemConnectedProps
 
+  protected _lastMessage: void | v35.agent.Event
+
   constructor(
     protected props: ChatsListItemProps,
     protected store = $Store(),
@@ -1019,6 +1021,8 @@ class ChatsListItemView {
         )
       ),
     )
+
+    this._lastMessage = void 0;
 
     this.clickListener = dom.addListener(this.el, "click", () => this.selectChat())
     this.chatRoute = this.controller.getCurrentChatRoute(props.chatId)
@@ -1096,8 +1100,10 @@ class ChatsListItemView {
       else if (this.chatRoute === "unassigned") {
         this.lastMessageEl.textContent = `Unassigned chat waiting for reply`
       }
-      else if (lastMessage) {
+      else if (lastMessage && this._lastMessage !== lastMessage) {
         this.lastMessageEl.textContent = helpers.stringifyChatEntity(lastMessage)
+        this.chatMeta.textContent = helpers.formatTime(lastMessage.created_at)
+        this._lastMessage = lastMessage
       }
 
       this.badgeEl.classList.toggle("d-none", unseenMessagesCount === 0)
