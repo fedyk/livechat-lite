@@ -1,5 +1,5 @@
 import { $Controller } from "./controller.js";
-import { createElement } from "./dom.js";
+import { createElement as h, createRef as Ref } from "./dom.js";
 import { createInjector, sortAgents, sortGroups } from "./helpers.js";
 import { list2 } from "./list.js";
 import { v35 } from "./livechat-api.js";
@@ -12,7 +12,8 @@ const ARROW_DOWN_KEY = 'ArrowDown'
 
 interface ICommand {
   id: string
-  name: string
+  title: string
+  subtitle?: string
   placeholder?: string
   highlight?: string
   select(): Promise<ICommand[] | void>
@@ -61,13 +62,13 @@ export function createCommandsView() {
   let selected: ISelected | void
   let isCommandMouseEventFiring = false
 
-  el = createElement("div", { className: "commands" },
-    createElement("div", { className: "commands-head" },
-      inputEl = createElement("input", { className: "commands-input", placeholder: "Search the command" })
+  el = h("div", { className: "commands" },
+    h("div", { className: "commands-head" },
+      inputEl = h("input", { className: "commands-input", placeholder: "Search the command" })
     ),
-    progressEl = createElement("div", { className: "commands-progress" }),
-    listEl = createElement("div", { className: "commands-list" }),
-    emptyListEl = createElement("div", { className: "commands-empty" }, "Nothing found"),
+    progressEl = h("div", { className: "commands-progress" }),
+    listEl = h("div", { className: "commands-list" }),
+    emptyListEl = h("div", { className: "commands-empty" }, "Nothing found"),
   )
 
   document.addEventListener("keydown", keydownHandler)
@@ -300,11 +301,14 @@ type ICommandViewProps = {
 }
 
 function createCommandView(props: ICommandViewProps) {
-  let el: HTMLDivElement
-  let name: HTMLDivElement
+  const title = Ref<HTMLDivElement>()
+  const subtitle = Ref<HTMLDivElement>()
 
-  el = createElement("div", { className: "command-item" },
-    name = createElement("div", { className: "command-name" })
+  const el = h("div", { className: "command-item" },
+    h("div", { className: "command-name" },
+      h("div", { className: "", ref: title}),
+      h("div", { className: "text-secondary", ref: subtitle})
+    )
   )
 
   el.onmousedown = function (event) {
@@ -352,11 +356,13 @@ function createCommandView(props: ICommandViewProps) {
 
   function render() {
     if (props.command.highlight) {
-      name.innerHTML = props.command.highlight
+      title.current.innerHTML = props.command.highlight
     }
     else {
-      name.textContent = props.command.name
+      title.current.textContent = props.command.title
     }
+
+    subtitle.current.textContent = props.command.subtitle ?? ""
 
     el.classList.toggle("active", props.isActive)
   }
@@ -411,7 +417,7 @@ function createTransferCommand(chatId: string): ICommand {
 
   return {
     id: `transfer_command`,
-    name: "Transfer chat",
+    title: "Transfer chat",
     placeholder: "Select Agent or Group",
     select: select,
   }
@@ -419,7 +425,7 @@ function createTransferCommand(chatId: string): ICommand {
   async function select() {
     return Promise.all([
       controller.syncAgents(),
-      controller.maybeSyncGroups()
+      controller.syncGroups()
     ]).then(function () {
       const state = store.getState()
       const agents = sortAgents(state.agents, state.routingStatuses)
@@ -442,7 +448,7 @@ function createAssignToMeCommand(chatId: string): ICommand {
 
   return {
     id: `assign_to_me_command`,
-    name: "Assign chat to me",
+    title: "Assign chat to me",
     select: select,
   }
 
@@ -456,7 +462,7 @@ function createUnpinCommand(chatId: string): ICommand {
 
   return {
     id: `unpin_chat_command`,
-    name: "Archive chat",
+    title: "Archive chat",
     select: select,
   }
 
@@ -490,7 +496,7 @@ function createRoutingToggleCommand(): ICommand | void {
 
   return {
     id: `routing_toggle_command`,
-    name: commandName,
+    title: commandName,
     select: select,
   }
 
@@ -510,7 +516,8 @@ function createTransferToAgentCommand(chatId: string, agent: v35.conf.Agent): IC
 
   return {
     id: `transfer_to_agent_${agent.id}`,
-    name: agent.name,
+    title: agent.name,
+    subtitle: agent.id,
     select
   }
 
@@ -527,7 +534,7 @@ function createTransferToGroupCommand(chatId: string, group: v35.conf.Group): IC
 
   return {
     id: `transfer_to_group_${group.id}`,
-    name: group.name,
+    title: group.name,
     select
   }
 
@@ -544,7 +551,7 @@ function createCloseChatCommand(chatId: string): ICommand {
 
   return {
     id: `close_chat_command_${chatId}`,
-    name: "Archive chat",
+    title: "Archive chat",
     select
   }
 
@@ -572,18 +579,18 @@ function filterOutCommands(commands: ICommand[], query: string): ICommand[] {
   let c: ICommand
 
   for (c of commands) {
-    name = c.name.toLocaleLowerCase()
+    name = c.title.toLocaleLowerCase()
     index = name.indexOf(query)
 
     if (index === -1) {
       continue
     }
 
-    highlight = c.name.slice(0, index) + "<mark>" + c.name.slice(index, index + length) + `</mark>` + c.name.slice(index + length)
+    highlight = c.title.slice(0, index) + "<mark>" + c.title.slice(index, index + length) + `</mark>` + c.title.slice(index + length)
 
     results.push({
       id: c.id,
-      name: c.name,
+      title: c.title,
       highlight: highlight,
       select: c.select,
     })

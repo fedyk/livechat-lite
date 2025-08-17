@@ -1,5 +1,5 @@
 import { Subscriber, Unsubscriber } from "./types.js"
-import { AbortError, createInjector, createUnsubscribers, ErrorWithType, getRandomId, TypedEventEmitter } from "./helpers.js"
+import { AbortError, createInjector, createUnsubscribers, ErrorWithType, randomStr, TypedEventEmitter } from "./helpers.js"
 import type { ChatRoute, ColorScheme } from "./types.js"
 
 interface RTMEvents {
@@ -568,7 +568,7 @@ export class ProgressSignal {
 }
 
 export async function createLock(lockName: string, timeout: number) {
-  const value = getRandomId(8)
+  const value = randomStr(8)
   const started_at = Date.now()
   const expired_at = started_at + timeout
   const item = JSON.stringify({ value, expired_at })

@@ -1,20 +1,41 @@
 import { $Controller } from "./controller.js"
 import * as dom from "./dom.js"
+import {
+  createElement as h,
+  createElementNS as hNS,
+  createFragment as f,
+  createRef as Ref
+} from "./dom.js"
 import * as helpers from "./helpers.js"
-import { $ChatRouter, AutoResize, ProgressSignal, ReverseScroll, createAutoResize } from "./services.js"
+import {
+  $ChatRouter,
+  AutoResize,
+  ProgressSignal,
+  ReverseScroll,
+  createAutoResize
+} from "./services.js"
 import { $Store, State } from "./store.js"
-import { ArchivedChatsStatus, ChatEntity, ChatGap, ChatRoute, FileUploadModal, InactiveChatsStatus, MessageStatus, Modal, RestrictedThread, SearchResult, SneakPeekAsEvent } from "./types.js"
 import { rest } from "./rest-api.js"
 import { v35 } from "./livechat-api.js"
 import { $CommandsController, createCommandsView } from "./commands.js"
 import type { Unsubscriber } from "./types.js"
 import { BaseContext, ElementWithContext, list2 } from "./list.js"
-
-const h = dom.createElement;
-const f = dom.createFragment;
+import type {
+  ArchivedChatsStatus,
+  ChatEntity,
+  ChatGap,
+  ChatRoute,
+  FileUploadModal,
+  InactiveChatsStatus,
+  MessageStatus,
+  Modal,
+  RestrictedThread,
+  SearchResult,
+  SneakPeekAsEvent
+} from "./types.js"
 
 export function createAppView() {
-  const el = dom.createElement("div", { className: "app" })
+  const el = h("div", { className: "app" })
   const mainScreen = createMainScreen()
   const commands = createCommandsView()
   const commandsController = $CommandsController()
@@ -41,13 +62,13 @@ export function createAppView() {
 
 function createMainScreen() {
   const store = $Store()
-  const sidebarElRef = dom.createRef<HTMLDivElement>()
-  const mainElRef = dom.createRef<HTMLDivElement>()
-  const mainHeaderRef = dom.createRef<MainHeaderView>()
-  const chatFoldersRef = dom.createRef<ChatFoldersView>()
-  const chatListRef = dom.createRef<ChatListView>()
-  const chatsViewRef = dom.createRef<ChatsView>()
-  const chatSearchResultsRef = dom.createRef<ChatSearchResultsView>()
+  const sidebarElRef = Ref<HTMLDivElement>()
+  const mainElRef = Ref<HTMLDivElement>()
+  const mainHeaderRef = Ref<MainHeaderView>()
+  const chatFoldersRef = Ref<ChatFoldersView>()
+  const chatListRef = Ref<ChatListView>()
+  const chatsViewRef = Ref<ChatsView>()
+  const chatSearchResultsRef = Ref<ChatSearchResultsView>()
   const el = h("div", { className: "main" },
     h("div", { className: "sidebar", ref: sidebarElRef },
       createMainHeaderView({ ref: mainHeaderRef }).el,
@@ -127,19 +148,19 @@ function createMainHeaderView(options: {
 }): MainHeaderView {
   const store = $Store()
   const controller = $Controller()
-  const dropdownMenuElRef = dom.createRef<HTMLDivElement>()
-  const routingInputElRef = dom.createRef<HTMLInputElement>()
+  const dropdownMenuElRef = Ref<HTMLDivElement>()
+  const routingInputElRef = Ref<HTMLInputElement>()
   const searchInputElRef = controller.chatSearchInputRef
-  const searchButtonElRef = dom.createRef<HTMLButtonElement>()
-  const myAvatarRef = dom.createRef<AvatarView>()
-  const headerMenuElRef = dom.createRef<HTMLDivElement>()
-  const menuButtonElRef = dom.createRef<HTMLButtonElement>()
-  const backButtonElRef = dom.createRef<HTMLButtonElement>()
-  const lightColorModeBtnRef = dom.createRef<HTMLButtonElement>()
-  const darkColorModeBtnRef = dom.createRef<HTMLButtonElement>()
-  const autoColorModeBtnRef = dom.createRef<HTMLButtonElement>()
-  const myProfileNameRef = dom.createRef<HTMLDivElement>()
-  const myProfileEmailRef = dom.createRef<HTMLDivElement>()
+  const searchButtonElRef = Ref<HTMLButtonElement>()
+  const myAvatarRef = Ref<AvatarView>()
+  const headerMenuElRef = Ref<HTMLDivElement>()
+  const menuButtonElRef = Ref<HTMLButtonElement>()
+  const backButtonElRef = Ref<HTMLButtonElement>()
+  const lightColorModeBtnRef = Ref<HTMLButtonElement>()
+  const darkColorModeBtnRef = Ref<HTMLButtonElement>()
+  const autoColorModeBtnRef = Ref<HTMLButtonElement>()
+  const myProfileNameRef = Ref<HTMLDivElement>()
+  const myProfileEmailRef = Ref<HTMLDivElement>()
   const el = h("div", {
     className: "main-header"
   },
@@ -411,11 +432,11 @@ interface ChatFoldersViewOptions {
 function createChatFoldersView(options: ChatFoldersViewOptions): ChatFoldersView {
   const store = $Store()
   const controller = $Controller()
-  const myTabBadge = dom.createElement("span", { className: "tab-badge" })
-  const supervisedTabBadge = dom.createElement("span", { className: "tab-badge" })
-  const queuedTabBadge = dom.createElement("span", { className: "tab-badge" })
-  const pinnedTabBadge = dom.createElement("span", { className: "tab-badge" })
-  const allTab = dom.createElement("button", {
+  const myTabBadge = h("span", { className: "tab-badge" })
+  const supervisedTabBadge = h("span", { className: "tab-badge" })
+  const queuedTabBadge = h("span", { className: "tab-badge" })
+  const pinnedTabBadge = h("span", { className: "tab-badge" })
+  const allTab = h("button", {
     className: "tab",
     onmouseover() {
       controller.maybeSyncInactiveChats()
@@ -424,25 +445,25 @@ function createChatFoldersView(options: ChatFoldersViewOptions): ChatFoldersView
       controller.selectedChatFolder("all")
     }
   }, "All")
-  const myTab = dom.createElement("button", {
+  const myTab = h("button", {
     className: "tab",
     onclick() {
       controller.selectedChatFolder("my")
     }
   }, "My", myTabBadge)
-  const supervisedTab = dom.createElement("button", {
+  const supervisedTab = h("button", {
     className: "tab",
     onclick() {
       controller.selectedChatFolder("supervised")
     },
   }, "Supervised", supervisedTabBadge)
-  const queuedTab = dom.createElement("button", {
+  const queuedTab = h("button", {
     className: "tab",
     onclick() {
       controller.selectedChatFolder("queued")
     }
   }, "Queued", queuedTabBadge)
-  const unassignedTab = dom.createElement("button", {
+  const unassignedTab = h("button", {
     className: "tab",
     onmouseover() {
       controller.maybeSyncPinnedChats()
@@ -451,7 +472,7 @@ function createChatFoldersView(options: ChatFoldersViewOptions): ChatFoldersView
       controller.selectedChatFolder("unassigned")
     }
   }, "Unassigned", pinnedTabBadge)
-  const archivedTab = dom.createElement("button", {
+  const archivedTab = h("button", {
     className: "tab",
     onclick() {
       controller.selectedChatFolder("archived")
@@ -460,7 +481,7 @@ function createChatFoldersView(options: ChatFoldersViewOptions): ChatFoldersView
       controller.maybeSyncArchivedChats()
     }
   }, "Archived")
-  const el = dom.createElement("div", { className: "tabs flex-shrink-0 border-bottom" },
+  const el = h("div", { className: "tabs flex-shrink-0 border-bottom" },
     allTab,
     myTab,
     supervisedTab,
@@ -541,17 +562,17 @@ interface ChatListViewOptions {
 
 function createChatListView(options: ChatListViewOptions): ChatListView {
   const controller = $Controller()
-  const el = dom.createElement("div", { className: "chats-lists" })
-  const emptyStateEl = dom.createElement("div", { className: "chats-list-empty hidden" }, "Nothing interesting here yet...")
-  const loaderEl = dom.createElement("div", { className: "sticky-center hidden" },
-    dom.createElement("div", { className: "loader" })
+  const el = h("div", { className: "chats-lists" })
+  const emptyStateEl = h("div", { className: "chats-list-empty hidden" }, "Nothing interesting here yet...")
+  const loaderEl = h("div", { className: "sticky-center hidden" },
+    h("div", { className: "loader" })
   )
-  const allChatsList = dom.createElement("div", { className: "chats-list" })
-  const myChatsList = dom.createElement("div", { className: "chats-list" })
-  const supervisedChatsList = dom.createElement("div", { className: "chats-list" })
-  const queuedChatsList = dom.createElement("div", { className: "chats-list" })
-  const unassignedChatsList = dom.createElement("div", { className: "chats-list" })
-  const archivedChatsList = dom.createElement("div", { className: "chats-list" })
+  const allChatsList = h("div", { className: "chats-list" })
+  const myChatsList = h("div", { className: "chats-list" })
+  const supervisedChatsList = h("div", { className: "chats-list" })
+  const queuedChatsList = h("div", { className: "chats-list" })
+  const unassignedChatsList = h("div", { className: "chats-list" })
+  const archivedChatsList = h("div", { className: "chats-list" })
   // let loaderAllChats: HTMLDivElement
   // let loaderArchivedChats: HTMLDivElement
 
@@ -784,9 +805,9 @@ interface ChatSearchResultsViewOptions {
 function createChatSearchResultsView(options: ChatSearchResultsViewOptions) {
   const store = $Store()
   const controller = $Controller()
-  const placeholderRef = dom.createRef<HTMLDivElement>()
-  const recentRef = dom.createRef<HTMLDivElement>()
-  const resultsRef = dom.createRef<HTMLDivElement>()
+  const placeholderRef = Ref<HTMLDivElement>()
+  const recentRef = Ref<HTMLDivElement>()
+  const resultsRef = Ref<HTMLDivElement>()
   const el = h("div", { className: "position-relative flex-basis-100 overflow-auto" },
     h("div", { className: "text-secondary text-center sticky-center", ref: placeholderRef }),
     h("div", { className: "list", ref: recentRef }),
@@ -862,8 +883,8 @@ function createChatSearchResultsView(options: ChatSearchResultsViewOptions) {
       values: queries,
       key: query => query,
       enter(ctx) {
-        ctx.btnRef = dom.createRef()
-        ctx.labelRef = dom.createRef()
+        ctx.btnRef = Ref()
+        ctx.labelRef = Ref()
         ctx.el = h("div", {
           className: "list-action d-flex align-items-center justify-content-space-between",
           onclick() {
@@ -905,8 +926,8 @@ function createChatSearchResultsView(options: ChatSearchResultsViewOptions) {
       values: results,
       key: result => result?.id,
       enter(ctx) {
-        ctx.listElRef = dom.createRef<HTMLDivElement>()
-        ctx.avatarViewRef = dom.createRef<AvatarView>()
+        ctx.listElRef = Ref<HTMLDivElement>()
+        ctx.avatarViewRef = Ref<AvatarView>()
         ctx.el = h("div", {
           ref: ctx.listElRef,
           className: `list-action d-flex align-items-center ${searchSelectedResult === ctx.value.id ? "active" : ""}`,
@@ -985,16 +1006,16 @@ class ChatsListItemView {
     protected chatRouter = $ChatRouter(),
   ) {
     this.itemAvatar = null
-    this.el = dom.createElement("div", { className: "chats-list-item", },
-      this.itemAvatarEl = dom.createElement("div", { className: "chat-list-item-avatar" }),
-      this.chatSummaryEl = dom.createElement("div", { className: "chat-item-caption", },
-        dom.createElement("div", { className: "chat-item-title", },
-          this.chatTitle = dom.createElement("div", { className: "chat-item-name text-ellipsis", textContent: "Unnamed visitor" }),
-          this.chatMeta = dom.createElement("div", { className: "chat-item-meta" })
+    this.el = h("div", { className: "chats-list-item", },
+      this.itemAvatarEl = h("div", { className: "chat-list-item-avatar" }),
+      this.chatSummaryEl = h("div", { className: "chat-item-caption", },
+        h("div", { className: "chat-item-title", },
+          this.chatTitle = h("div", { className: "chat-item-name text-ellipsis", textContent: "Unnamed visitor" }),
+          this.chatMeta = h("div", { className: "chat-item-meta" })
         ),
-        dom.createElement("div", { className: "chat-item-subtitle" },
-          this.lastMessageEl = dom.createElement("div", { className: "chat-item-last-message" }),
-          this.badgeEl = dom.createElement("div", { className: "chat-item-badge" })
+        h("div", { className: "chat-item-subtitle" },
+          this.lastMessageEl = h("div", { className: "chat-item-last-message" }),
+          this.badgeEl = h("div", { className: "chat-item-badge" })
         )
       ),
     )
@@ -1208,8 +1229,8 @@ function createChatView(options: ChatViewOptions) {
   const controller = $Controller()
   const abort = new AbortController()
   const chatId = options.chatId
-  const chatRef = dom.createRef<ChatFeedView>()
-  const detailsRef = dom.createRef<CustomerDetailsView>()
+  const chatRef = Ref<ChatFeedView>()
+  const detailsRef = Ref<CustomerDetailsView>()
 
   const el = h("div", { className: "chat" },
     createChatFeedView({ chatId, ref: chatRef }).el,
@@ -1268,9 +1289,9 @@ interface ChatFeedViewProps {
 }
 
 function createChatFeedView(props: ChatFeedViewProps) {
-  const chatBodyRef = dom.createRef<ChatBodyView>()
-  const chatHeaderRef = dom.createRef<ChatHeaderView>()
-  const chatFooterRef = dom.createRef<ChatFooter>()
+  const chatBodyRef = Ref<ChatBodyView>()
+  const chatHeaderRef = Ref<ChatHeaderView>()
+  const chatFooterRef = Ref<ChatFooter>()
 
   const el = h("div", {
     className: "chat-feed"
@@ -1322,7 +1343,7 @@ function createChatHeaderView(props: {
   let el: HTMLDivElement
   let headerAvatarEl: HTMLDivElement
   let headerAvatar: AvatarView | null = null
-  const headerTitleRef = dom.createRef<HTMLDivElement>()
+  const headerTitleRef = Ref<HTMLDivElement>()
 
   el = h("div", { className: "chat-header" },
     headerAvatarEl = h("div", { className: "chat-header-avatar" }),
@@ -1397,7 +1418,7 @@ function createChatFooter(props: {
   readonly chatId: string
   ref: dom.Ref<ChatFooter>
 }) {
-  const el = dom.createElement("div", { className: "chat-footer" })
+  const el = h("div", { className: "chat-footer" })
   const chatRouter = $ChatRouter()
   let composer: ComposerView | null = null
   let chatQuickActions: ChatQuickActions | null = null
@@ -1474,7 +1495,7 @@ interface ChatBodyViewProps {
 function createChatBodyView(props: ChatBodyViewProps): ChatBodyView {
   const store = $Store()
   const controller = $Controller()
-  const messagesElRef = dom.createRef<HTMLDivElement>()
+  const messagesElRef = Ref<HTMLDivElement>()
   const onThrottledScrollMessages = helpers.throttle(onScrollMessages, 200)
   const el = h("div", { className: "chat-body" },
     h("div", { className: "messages", ref: messagesElRef })
@@ -1688,10 +1709,10 @@ function createComposerView(props: {
   const composerId = `composer_${++composerCounter}`
   const controller = $Controller()
   const chatRouter = $ChatRouter()
-  const inputContainerRef = dom.createRef<HTMLLabelElement>()
-  const inputRef = dom.createRef<HTMLTextAreaElement>()
-  const sendButtonRef = dom.createRef<HTMLButtonElement>()
-  const fileInputRef = dom.createRef<HTMLInputElement>()
+  const inputContainerRef = Ref<HTMLLabelElement>()
+  const inputRef = Ref<HTMLTextAreaElement>()
+  const sendButtonRef = Ref<HTMLButtonElement>()
+  const fileInputRef = Ref<HTMLInputElement>()
   let chatRoute: ChatRoute
   let chatGroupIds: number[] = [0]
   const composerActions = new ComposerActions({ items: [] })
@@ -1700,6 +1721,7 @@ function createComposerView(props: {
   let autocompleteKey = ""
   let autocompleteQuery = ""
   let cannedResponses: Record<number, rest.CannedResponse[]>
+
   const el = h("div", { className: "composer" },
     composerActions.el,
 
@@ -1892,7 +1914,7 @@ function createComposerView(props: {
       return // nothing to send
     }
 
-    controller.sendTextMessage(props.chatId, text, "all")
+    controller.sendTextMessage(props.chatId, text)
 
     inputRef.current.value = ""
 
@@ -1962,11 +1984,14 @@ type ChatQuickActions = ReturnType<typeof createChatQuickActions>
 function createChatQuickActions(props: {
   readonly chatId: string
 }) {
-  const el = dom.createElement("div", { className: "chat-quick-actions" })
-  const assignToMeBtn = dom.createElement("button", { className: "chat-quick-action" }, "Assign to me")
-  const superviseBtn = dom.createElement("button", { className: "chat-quick-action" }, "Supervise")
-  const takeOverBtn = dom.createElement("button", { className: "chat-quick-action" }, "Take over")
+  const el = h("div", { className: "chat-quick-actions" })
+  const assignToMeBtn = h("button", { className: "chat-quick-action" }, "Assign to me")
+  const superviseBtn = h("button", { className: "chat-quick-action" }, "Supervise")
+  const takeOverBtn = h("button", { className: "chat-quick-action" }, "Take over")
+  const unpinChatBtn = h("button", { className: "chat-quick-action" }, "Archive")
+
   const ctrl = $Controller()
+
   const unsubscribe = $ChatRouter().onChatRouteChange(function (event) {
     if (event.chatId === props.chatId) {
       update(event.finalChatRoute)
@@ -1983,11 +2008,15 @@ function createChatQuickActions(props: {
     assignToMeBtn,
     superviseBtn,
     takeOverBtn,
+    unpinChatBtn,
   )
 
   assignToMeBtn.onclick = assignToMe
   superviseBtn.onclick = supervise
   takeOverBtn.onclick = takeOver
+  unpinChatBtn.onclick = function () {
+    ctrl.unpinChat(props.chatId)
+  }
 
   return {
     el,
@@ -1999,6 +2028,7 @@ function createChatQuickActions(props: {
     assignToMeBtn.onclick = null!
     superviseBtn.onclick = null!
     takeOverBtn.onclick = null!
+    unpinChatBtn.onclick = null!
     el.remove()
   }
 
@@ -2006,8 +2036,9 @@ function createChatQuickActions(props: {
     assignToMeBtn.classList.toggle("hidden", !(
       chatRoute === "unassigned" || chatRoute === "pinned" || chatRoute === "queued" || chatRoute === "closed"
     ))
-    superviseBtn.classList.toggle("hidden", !(chatRoute == "other"))
-    takeOverBtn.classList.toggle("hidden", !(chatRoute == "other"))
+    superviseBtn.classList.toggle("hidden", chatRoute !== "other")
+    takeOverBtn.classList.toggle("hidden", chatRoute !== "other")
+    unpinChatBtn.classList.toggle("hidden", chatRoute !== "pinned")
   }
 
   function assignToMe() {
@@ -2045,8 +2076,8 @@ class ComposerActions extends helpers.TypedEventEmitter<ComposerActionsEvents> {
   constructor(protected props: ComposerActionsProps) {
     super()
 
-    this.el = dom.createElement("div", { className: "composer-actions" },
-      this.listEl = dom.createElement("div", { className: "composer-actions-list" })
+    this.el = h("div", { className: "composer-actions" },
+      this.listEl = h("div", { className: "composer-actions-list" })
     )
     this.selectedItem = 0
     this.render()
@@ -2114,9 +2145,9 @@ class ComposerActions extends helpers.TypedEventEmitter<ComposerActionsEvents> {
         const classNames = helpers.cx("composer-action", {
           active: that.selectedItem === ctx.index
         })
-        const item = dom.createElement("div", { className: classNames },
-          dom.createElement("div", { className: "composer-action-title", textContent: ctx.value.title }),
-          dom.createElement("div", { className: "composer-action-text", textContent: ctx.value.text })
+        const item = h("div", { className: classNames },
+          h("div", { className: "composer-action-title", textContent: ctx.value.title }),
+          h("div", { className: "composer-action-text", textContent: ctx.value.text })
         )
 
         item.onclick = function () {
@@ -2207,8 +2238,8 @@ export function factoryMessageView(props: MessageViewProps<ChatEntity>): Message
 }
 
 function createTextMessageView(props: MessageViewProps<v35.agent.MessageEvent>): MessageView<v35.agent.MessageEvent> {
-  const avatarViewRef = dom.createRef<AvatarView>()
-  const messageIndicatorRef = dom.createRef<MessageIndicatorView>()
+  const avatarViewRef = Ref<AvatarView>()
+  const messageIndicatorRef = Ref<MessageIndicatorView>()
   const myMessage = props.author?.id === props.myProfileId
   const el = h("div", { className: `message ${myMessage ? "right" : "left"}` },
     props.author && !myMessage && h("div", {
@@ -2271,13 +2302,13 @@ function createTextMessageView(props: MessageViewProps<v35.agent.MessageEvent>):
 }
 
 function createFileMessageView(props: MessageViewProps<v35.agent.FileEvent>): MessageView<v35.agent.FileEvent> {
-  const messageIndicatorRef = dom.createRef<MessageIndicatorView>()
-  const avatarViewRef = dom.createRef<AvatarView>()
-  const progressButtonRef = dom.createRef<ProgressButton>()
-  const subtitleRef = dom.createRef<HTMLDivElement>()
-  const imageProgressContainer = dom.createRef<HTMLDivElement>()
-  const progressLabelRef = dom.createRef<HTMLDivElement>()
-  const fileEarmarkRef = dom.createRef<SVGSVGElement>()
+  const messageIndicatorRef = Ref<MessageIndicatorView>()
+  const avatarViewRef = Ref<AvatarView>()
+  const progressButtonRef = Ref<ProgressButton>()
+  const subtitleRef = Ref<HTMLDivElement>()
+  const imageProgressContainer = Ref<HTMLDivElement>()
+  const progressLabelRef = Ref<HTMLDivElement>()
+  const fileEarmarkRef = Ref<SVGSVGElement>()
   const myMessage = props.author?.id === props.myProfileId
   const el = h("div", { className: `message ${myMessage ? "right" : "left"}` })
   let progressSignal = props.progressSignal
@@ -2503,8 +2534,8 @@ function createFileMessageView(props: MessageViewProps<v35.agent.FileEvent>): Me
 }
 
 function createRichMessageMessageView(props: MessageViewProps<v35.agent.RichMessageEvent>): MessageView<v35.agent.RichMessageEvent> {
-  const avatarViewRef = dom.createRef<AvatarView>()
-  const messageIndicatorRef = dom.createRef<MessageIndicatorView>()
+  const avatarViewRef = Ref<AvatarView>()
+  const messageIndicatorRef = Ref<MessageIndicatorView>()
   const myMessage = props.author?.id === props.myProfileId
   const el = h("div", { className: `message ${myMessage ? "right" : "left"}` },
     props.author && !myMessage && (
@@ -2616,8 +2647,8 @@ function createRichMessageMessageView(props: MessageViewProps<v35.agent.RichMess
 }
 
 function createFilledFormMessageView(props: MessageViewProps<v35.agent.FilledFormEvent>): MessageView<v35.agent.FilledFormEvent> {
-  const avatarViewRef = dom.createRef<AvatarView>()
-  const messageIndicatorRef = dom.createRef<MessageIndicatorView>()
+  const avatarViewRef = Ref<AvatarView>()
+  const messageIndicatorRef = Ref<MessageIndicatorView>()
   const myMessage = props.author?.id === props.myProfileId
   const el = h("div", { className: `message ${myMessage ? "right" : "left"}` },
     props.author && !myMessage && h("div", {
@@ -2731,9 +2762,9 @@ function createChatGapMessageView(props: MessageViewProps<ChatGap>): MessageView
 }
 
 function createSneakPeekMessageView(props: MessageViewProps<SneakPeekAsEvent>): MessageView<SneakPeekAsEvent> {
-  const avatarViewRef = dom.createRef<AvatarView>()
+  const avatarViewRef = Ref<AvatarView>()
   const myMessage = props.author?.id === props.myProfileId
-  const textElRef = dom.createRef<HTMLSpanElement>()
+  const textElRef = Ref<HTMLSpanElement>()
   const el = h("div", { className: `message ${myMessage ? "right" : "left"}` },
     props.author && !myMessage && h("div", {
       className: "message-avatar",
@@ -2818,7 +2849,7 @@ interface MessageIndicatorProps {
 }
 
 function createMessageIndicatorView(props: MessageIndicatorProps) {
-  const timeElRef = dom.createRef<HTMLDivElement>()
+  const timeElRef = Ref<HTMLDivElement>()
   const el = h("div", { className: `message-indicator ${props.sticky ? "sticky" : ""} ${props.contrast ? "contrast" : ""}` },
     h("span", { ref: timeElRef, className: "message-indicator-time" }, props.time || ""),
     icons.createClockIcon({ size: 14, class: "message-indicator-icon message-indicator-clock-icon" }),
@@ -2878,10 +2909,10 @@ interface DetailsItem {
 function createCustomerDetailsView(props: DetailsViewProps): CustomerDetailsView {
   const store = $Store()
   const controller = $Controller()
-  const nameElRef = dom.createRef<HTMLDivElement>()
-  const emailElRef = dom.createRef<HTMLDivElement>()
-  const avatarViewRef = dom.createRef<AvatarView>()
-  const detailsElRef = dom.createRef<HTMLDivElement>()
+  const nameElRef = Ref<HTMLDivElement>()
+  const emailElRef = Ref<HTMLDivElement>()
+  const avatarViewRef = Ref<AvatarView>()
+  const detailsElRef = Ref<HTMLDivElement>()
   const el = h("div", { className: "details" },
     h("div", { className: "details-header" },
       h("div", { className: "details-title" }, "Details")
@@ -3024,7 +3055,7 @@ function createCustomerDetailsView(props: DetailsViewProps): CustomerDetailsView
     dom.toggleEl(el, props.showDetailsSection)
   })
 
-  controller.maybeSyncGroups()
+  controller.syncGroups()
 
   return props.ref.current = {
     el,
@@ -3064,8 +3095,8 @@ function createCustomerDetailsView(props: DetailsViewProps): CustomerDetailsView
       values: details,
       key: (v) => v?.name,
       enter(ctx) {
-        ctx.nameElRef = dom.createRef<HTMLDivElement>()
-        ctx.valueElRef = dom.createRef<HTMLDivElement>()
+        ctx.nameElRef = Ref<HTMLDivElement>()
+        ctx.valueElRef = Ref<HTMLDivElement>()
 
         ctx.el = h("div", { className: "p-2 px-3 border-bottom" },
           h("small", {
@@ -3108,20 +3139,20 @@ interface AvatarViewProps {
 function createAvatarView(props: AvatarViewProps & {
   ref?: dom.Ref<AvatarView>
 }): AvatarView {
-  const imageElRef = dom.createRef<HTMLDivElement>()
-  const imgElRef = dom.createRef<HTMLImageElement>()
-  const initialsElRef = dom.createRef<HTMLDivElement>()
-  const badgeElRef = dom.createRef<HTMLDivElement>()
-  const el = dom.createElement("div", { className: "avatar" },
-    dom.createElement("div", { className: "avatar-image", ref: imageElRef },
-      dom.createElement("img", { src: props.src, alt: props.alt, ref: imgElRef })
+  const imageElRef = Ref<HTMLDivElement>()
+  const imgElRef = Ref<HTMLImageElement>()
+  const initialsElRef = Ref<HTMLDivElement>()
+  const badgeElRef = Ref<HTMLDivElement>()
+  const el = h("div", { className: "avatar" },
+    h("div", { className: "avatar-image", ref: imageElRef },
+      h("img", { src: props.src, alt: props.alt, ref: imgElRef })
     ),
-    dom.createElement("div", {
+    h("div", {
       className: "avatar-initials",
       textContent: helpers.getInitials(props.alt),
       ref: initialsElRef,
     }),
-    dom.createElement("div", { className: "avatar-badge", ref: badgeElRef })
+    h("div", { className: "avatar-badge", ref: badgeElRef })
   )
 
   imgElRef.current.onerror = onImgError
@@ -3322,10 +3353,10 @@ type FileUploadModalView = ReturnType<typeof createFileUploadModal>
 function createFileUploadModal(props: FileUploadModalProps) {
   const store = $Store()
   const controller = $Controller()
-  const modalRef = dom.createRef<HTMLDivElement>()
-  const modalContentRef = dom.createRef<HTMLDivElement>()
-  const modalBodyRef = dom.createRef<HTMLDivElement>()
-  const sendButtonRef = dom.createRef<HTMLButtonElement>()
+  const modalRef = Ref<HTMLDivElement>()
+  const modalContentRef = Ref<HTMLDivElement>()
+  const modalBodyRef = Ref<HTMLDivElement>()
+  const sendButtonRef = Ref<HTMLButtonElement>()
   const el = h("div", {
     className: "modal",
     ref: modalRef,
@@ -3375,8 +3406,8 @@ function createFileUploadModal(props: FileUploadModalProps) {
       values: props.modal.files,
       key: (file, index) => String(index),
       enter(ctx) {
-        ctx.nameRef = dom.createRef<HTMLDivElement>()
-        ctx.sizeRef = dom.createRef<HTMLDivElement>()
+        ctx.nameRef = Ref<HTMLDivElement>()
+        ctx.sizeRef = Ref<HTMLDivElement>()
         ctx.el = h("div", { className: "mb-2" },
           h("div", { className: "text-primary text-bold", ref: ctx.nameRef }, ctx.value.name),
           h("div", { className: "text-secondary", ref: ctx.sizeRef }, helpers.formatSize(ctx.value.size, true))
@@ -3435,7 +3466,7 @@ interface ProgressButtonNextProps {
 }
 
 export function createProgressButton(props: ProgressButtonProps) {
-  const circleRef = dom.createRef<SVGCircleElement>()
+  const circleRef = Ref<SVGCircleElement>()
   const el = h("button", { className: "progress-button", onclick: props.onClick },
     icons.createLoaderIcons({
       circleRef,
@@ -3480,7 +3511,7 @@ namespace icons {
   }
 
   export function createMenuIcon(props?: Props) {
-    return dom.createElementNS("svg", {
+    return hNS("svg", {
       class: props?.class ?? "",
       fill: "currentColor",
       width: props?.size || 48,
@@ -3488,14 +3519,14 @@ namespace icons {
       viewBox: "0 96 960 960",
       ref: props?.ref
     },
-      dom.createElementNS("path", {
+      hNS("path", {
         d: "M120 816v-60h720v60H120Zm0-210v-60h720v60H120Zm0-210v-60h720v60H120Z"
       })
     )
   }
 
   export function createCloseIcon(props?: Props) {
-    return dom.createElementNS("svg", {
+    return hNS("svg", {
       class: props?.class ?? "",
       fill: "currentColor",
       width: props?.size || 48,
@@ -3503,14 +3534,14 @@ namespace icons {
       viewBox: "0 96 960 960",
       ref: props?.ref
     },
-      dom.createElementNS("path", {
+      hNS("path", {
         d: "m249 849-42-42 231-231-231-231 42-42 231 231 231-231 42 42-231 231 231 231-42 42-231-231-231 231Z"
       })
     )
   }
 
   export function createArrowBackIcon(props?: Props) {
-    return dom.createElementNS("svg", {
+    return hNS("svg", {
       class: props?.class ?? "",
       fill: "currentColor",
       width: props?.size || 48,
@@ -3518,14 +3549,14 @@ namespace icons {
       viewBox: "0 96 960 960",
       ref: props?.ref
     },
-      dom.createElementNS("path", {
+      hNS("path", {
         d: "M480 896 160 576l320-320 42 42-248 248h526v60H274l248 248-42 42Z"
       })
     )
   }
 
   export function createClockIcon(props?: Props) {
-    return dom.createElementNS("svg", {
+    return hNS("svg", {
       class: props?.class ?? "",
       fill: "currentColor",
       width: props?.size || 48,
@@ -3533,11 +3564,11 @@ namespace icons {
       viewBox: "0 0 16 16",
       ref: props?.ref
     },
-      dom.createElementNS("path", {
+      hNS("path", {
         "fill-rule": "evenodd",
         d: "M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm8-7A8 8 0 1 1 0 8a8 8 0 0 1 16 0z"
       }),
-      dom.createElementNS("path", {
+      hNS("path", {
         "fill-rule": "evenodd",
         d: "M7.5 3a.5.5 0 0 1 .5.5v5.21l3.248 1.856a.5.5 0 0 1-.496.868l-3.5-2A.5.5 0 0 1 7 9V3.5a.5.5 0 0 1 .5-.5z"
       })
@@ -3545,7 +3576,7 @@ namespace icons {
   }
 
   export function createCheckIcon(props?: Props) {
-    return dom.createElementNS("svg", {
+    return hNS("svg", {
       class: props?.class ?? "",
       fill: "currentColor",
       width: props?.size || 48,
@@ -3553,7 +3584,7 @@ namespace icons {
       viewBox: "0 0 16 16",
       ref: props?.ref
     },
-      dom.createElementNS("path", {
+      hNS("path", {
         "fill-rule": "evenodd",
         d: "M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"
       })
@@ -3561,7 +3592,7 @@ namespace icons {
   }
 
   export function createCheckAllIcon(props?: Props) {
-    return dom.createElementNS("svg", {
+    return hNS("svg", {
       class: props?.class ?? "",
       fill: "currentColor",
       width: props?.size || 48,
@@ -3569,11 +3600,11 @@ namespace icons {
       viewBox: "0 0 16 16",
       ref: props?.ref
     },
-      dom.createElementNS("path", {
+      hNS("path", {
         "fill-rule": "evenodd",
         d: "M12.354 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"
       }),
-      dom.createElementNS("path", {
+      hNS("path", {
         "fill-rule": "evenodd",
         d: "M6.25 8.043l-.896-.897a.5.5 0 1 0-.708.708l.897.896.707-.707zm1 2.414l.896.897a.5.5 0 0 0 .708 0l7-7a.5.5 0 0 0-.708-.708L8.5 10.293l-.543-.543-.707.707z"
       })
@@ -3581,7 +3612,7 @@ namespace icons {
   }
 
   export function createPinIcon(props?: Props) {
-    return dom.createElementNS("svg", {
+    return hNS("svg", {
       class: props?.class ?? "",
       fill: "currentColor",
       width: props?.size || 48,
@@ -3589,11 +3620,11 @@ namespace icons {
       viewBox: "0 0 16 16",
       ref: props?.ref
     },
-      dom.createElementNS("path", {
+      hNS("path", {
         "fill-rule": "evenodd",
         d: "M12.166 8.94C12.696 7.867 13 6.862 13 6A5 5 0 0 0 3 6c0 .862.305 1.867.834 2.94.524 1.062 1.234 2.12 1.96 3.07A31.481 31.481 0 0 0 8 14.58l.208-.22a31.493 31.493 0 0 0 1.998-2.35c.726-.95 1.436-2.008 1.96-3.07zM8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10z"
       }),
-      dom.createElementNS("path", {
+      hNS("path", {
         "fill-rule": "evenodd",
         d: "M8 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 1a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"
       })
@@ -3601,7 +3632,7 @@ namespace icons {
   }
 
   export function createAttachIcon(props?: Props) {
-    return dom.createElementNS("svg", {
+    return hNS("svg", {
       class: props?.class ?? "",
       fill: "currentColor",
       width: props?.size || 24,
@@ -3609,7 +3640,7 @@ namespace icons {
       viewBox: "0 0 512 512",
       ref: props?.ref
     },
-      dom.createElementNS("path", {
+      hNS("path", {
         "fill-rule": "evenodd",
         fill: "none",
         stroke: "currentColor",
@@ -3626,7 +3657,7 @@ namespace icons {
   export function createLoaderIcons(props?: Props & {
     circleRef?: dom.Ref<SVGCircleElement>
   }) {
-    return dom.createElementNS("svg", {
+    return hNS("svg", {
       class: props?.class ?? "",
       fill: "currentColor",
       width: props?.size || 24,
@@ -3634,12 +3665,12 @@ namespace icons {
       viewBox: "0 0 24 24",
       ref: props?.ref
     },
-      dom.createElementNS("path", {
+      hNS("path", {
         fill: "currentColor",
         stroke: "none",
         d: "M8.43078 16.2154L12 12.6462L15.5692 16.2154L16.2154 15.5692L12.6462 12L16.2154 8.43078L15.5692 7.7846L12 11.3538L8.43078 7.7846L7.7846 8.43078L11.3538 12L7.7846 15.5692L8.43078 16.2154Z"
       }),
-      dom.createElementNS("circle", {
+      hNS("circle", {
         ref: props?.circleRef,
         cx: "12",
         cy: "12",
@@ -3654,7 +3685,7 @@ namespace icons {
   }
 
   export function createFileEarmarkIcon(props?: Props) {
-    return dom.createElementNS("svg", {
+    return hNS("svg", {
       class: props?.class ?? "",
       fill: "currentColor",
       width: props?.size || 24,
@@ -3662,11 +3693,11 @@ namespace icons {
       viewBox: "0 0 16 16",
       ref: props?.ref
     },
-      dom.createElementNS("path", {
+      hNS("path", {
         fill: "currentColor",
         d: "M4 0h5.5v1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h1V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2z"
       }),
-      dom.createElementNS("path", {
+      hNS("path", {
         fill: "currentColor",
         d: "M9.5 3V0L14 4.5h-3A1.5 1.5 0 0 1 9.5 3z"
       })

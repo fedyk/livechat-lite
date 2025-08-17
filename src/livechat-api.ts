@@ -34,9 +34,12 @@ export namespace v35 {
 
     export type User = Agent | Customer
 
+    export type Visibility = "all" | "agents"
+
     export interface Agent {
       id: string
       type: "agent"
+      visibility: Visibility
       name: string
       email: string
       present: boolean
@@ -172,7 +175,7 @@ export namespace v35 {
       type: "annotation"
       author_id: string
       created_at: Date
-      visibility: "all" | "agents"
+      visibility: Visibility
       annotation_type: "rating" | "rating_cancel"
       properties: EventProperties
     }
@@ -182,7 +185,7 @@ export namespace v35 {
       custom_id?: string
       type: "custom"
       author_id: string
-      visibility: "agents" | "all"
+      visibility: Visibility
       created_at: Date
     }
 
@@ -192,13 +195,11 @@ export namespace v35 {
       type: "rich_message"
       author_id: string
       created_at: Date
-      visibility: "all" | "agents"
+      visibility: Visibility
       template_id: "cards" | "quick_replies" | "sticker"
       elements: Element[]
       properties: EventProperties
     }
-
-    export type Visibility = "all" | "agents"
 
     export interface ThreadProperties {
       routing: {
@@ -254,9 +255,6 @@ export namespace v35 {
       }
       source: {
         customer_client_id: string
-      }
-      supervising: {
-        agent_ids: string
       }
     }
 
@@ -955,7 +953,7 @@ export namespace v35 {
         thread_id: string
         typing_indicator: {
           author_id: string
-          visibility: "all" | "agents"
+          visibility: Visibility
           timestamp: number
           is_typing: boolean
         }
@@ -1127,7 +1125,7 @@ export namespace v35 {
       chat_id: string
       user_id: string
       user_type: "agent" | "customer"
-      visibility: "all" | "agents"
+      visibility: Visibility
       ignore_requester_presence?: boolean
     }) {
       return fetch("https://api.livechatinc.com/v3.5/agent/action/add_user_to_chat", {
@@ -1679,6 +1677,7 @@ export namespace v35 {
             email: String(user.email || ""),
             name: String(user.name || "Agent").trim(),
             type: "agent",
+            visibility: String(user.visibility || "all") as "all" | "agents",
             avatar: parseAvatarUrl(user.avatar),
             events_seen_up_to: parseEventsSeenUpTo(user.events_seen_up_to),
             present: Boolean(user.present),
@@ -1820,9 +1819,6 @@ export namespace v35 {
         source: {
           customer_client_id: getPropertyValue<string>(properties, "source", "customer_client_id", "")
         },
-        supervising: {
-          agent_ids: getPropertyValue<string>(properties, "supervising", "agent_ids", "")
-        }
       }
     }
 
@@ -1830,20 +1826,18 @@ export namespace v35 {
       const p: PartialChatProperties = {
         routing: {},
         source: {},
-        supervising: {}
       }
 
       if (p.routing && hasPropertyValue(properties, "routing", "continuous")) {
         p.routing.continuous = getPropertyValue<boolean>(properties, "routing", "continuous", false)
       }
+      
       if (p.routing && hasPropertyValue(properties, "routing", "pinned")) {
         p.routing.pinned = getPropertyValue<boolean>(properties, "routing", "pinned", false)
       }
+      
       if (p.source && hasPropertyValue(properties, "source", "customer_client_id")) {
         p.source.customer_client_id = getPropertyValue<string>(properties, "source", "customer_client_id", "")
-      }
-      if (p.supervising && hasPropertyValue(properties, "supervising", "agent_ids")) {
-        p.supervising.agent_ids = getPropertyValue<string>(properties, "supervising", "agent_ids", "")
       }
 
       return p
@@ -1853,7 +1847,6 @@ export namespace v35 {
       const p: DeletedChatProperties = {
         routing: [],
         source: [],
-        supervising: []
       }
 
       if (Array.isArray(properties.routing)) {
@@ -1862,10 +1855,6 @@ export namespace v35 {
 
       if (Array.isArray(properties.source)) {
         p.source = properties.source
-      }
-
-      if (Array.isArray(properties.supervising)) {
-        p.supervising = properties.supervising
       }
 
       return p

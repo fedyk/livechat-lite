@@ -1,5 +1,16 @@
-import { createInjector, ErrorWithType, getActiveThread, getIncompleteThreadIds } from "./helpers.js"
-import { ChatRouter, ChatTransition, createLock, Notifications, ProgressSignal } from "./services.js"
+import {
+  createInjector,
+  ErrorWithType,
+  getActiveThread,
+  getIncompleteThreadIds
+} from "./helpers.js"
+import {
+  ChatRouter,
+  ChatTransition,
+  createLock,
+  Notifications,
+  ProgressSignal
+} from "./services.js"
 import { Store } from "./store.js"
 import type * as types from "./types.js"
 import * as helpers from "./helpers.js"
@@ -146,11 +157,22 @@ export function createController(options: ControllerOptions) {
 
     state = store.getState()
 
-    const chatIds = helpers.unique(Object.keys(state.chats), resp.initState.chats_summary.map(c => c.id))
+    const chatIds = helpers.unique(
+      Object.keys(state.chats),
+      resp.initState.chats_summary.map(c => c.id)
+    )
+
     const transitions = startChatTransitions(chatIds)
 
-    store.dispatch({ networkStatus: "updating" })
-    store.setInitialState(resp.initState.chats_summary, resp.initState.license, resp.initState.my_profile)
+    store.dispatch({
+      networkStatus: "updating"
+    })
+
+    store.setInitialState(
+      resp.initState.chats_summary,
+      resp.initState.license,
+      resp.initState.my_profile
+    )
 
     transitions.commit()
 
@@ -229,8 +251,8 @@ export function createController(options: ControllerOptions) {
       //   return handleIncoming_rich_message_postback(push)
 
       // Properties
-      // case "chat_properties_updated":
-      //   return handle_chat_properties_updated(push)
+      case "chat_properties_updated":
+        return onChatPropertiesUpdated(push)
       // case "chat_properties_deleted":
       //   return handle_chat_properties_deleted(push)
       // case "thread_properties_updated":
@@ -428,6 +450,29 @@ export function createController(options: ControllerOptions) {
         })
       }
     }
+  }
+
+  function onChatPropertiesUpdated(push: v35.agent.ChatPropertiesUpdated) {
+    const { chat_id, properties } = push.payload
+    const transition = startChatTransition(chat_id)
+
+    store.dispatch(function (state) {
+      const chats = new Map(state.chats)
+      const chat = chats.get(chat_id)
+
+      if (!chat) {
+        return state
+      }
+
+      chats.set(chat_id, {
+        ...chat,
+        properties: helpers.mergeChatProperties(chat.properties, properties)
+      })
+
+      return { chats }
+    })
+
+    transition.commit()
   }
 
   function onRoutingStatusSet(push: v35.agent.RoutingStatusSet) {
@@ -683,10 +728,11 @@ export function createController(options: ControllerOptions) {
     return helpers.getChatRoute(chat, myProfileId)
   }
 
-  function sendTextMessage(chatId: string, text: string, visibility: "all" | "agents") {
+  function sendTextMessage(chatId: string, text: string) {
     const state = store.getState()
     const chat = state.chats.get(chatId)
     const authorId = state.myProfile?.id
+    let visibility: v35.agent.Visibility = "all"
 
     if (!chat) {
       throw new Error("Chat does not present in memory")
@@ -702,7 +748,11 @@ export function createController(options: ControllerOptions) {
       throw new Error("chat should be activated")
     }
 
-    const customId = helpers.getRandomId(8)
+    if (getChatRoute(chatId) === "supervised") {
+      visibility = "agents"
+    }
+
+    const customId = helpers.randomStr(8)
     const event: v35.agent.MessageEvent = {
       id: customId,
       custom_id: customId,
@@ -808,7 +858,7 @@ export function createController(options: ControllerOptions) {
       visibility = "agents"
     }
 
-    const customId = helpers.getRandomId(8)
+    const customId = helpers.randomStr(8)
     const url = URL.createObjectURL(file)
 
     const event: v35.agent.FileEvent = {
@@ -1276,19 +1326,15 @@ export function createController(options: ControllerOptions) {
     }
 
     return Promise.all([
-      v35.agent.updateChatProperties(accessToken, {
-        id: chatId,
-        properties: {
-          supervising: {
-            agent_ids: helpers.unique(
-              chat.properties.supervising.agent_ids.split(","),
-              [myProfileId]
-            ).join(",")
-          }
-        }
-      }),
       v35.agent.followChat(accessToken, {
         id: chatId
+      }),
+      v35.agent.addUserToChat(accessToken, {
+        chat_id: chatId,
+        user_id: myProfileId,
+        visibility: "agents",
+        user_type: "agent",
+        ignore_requester_presence: true,
       })
     ]).catch(console.error)
   }
@@ -1319,7 +1365,6 @@ export function createController(options: ControllerOptions) {
       console.error(err.message)
     })
   }
-
 
   async function transferChat(chatId: string, target: { type: "group" | "agent", ids: Array<string | number> }) {
     const accessToken = await getAccessToken()

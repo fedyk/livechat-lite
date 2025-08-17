@@ -274,8 +274,18 @@ export function getChatRoute(chat: v35.agent.Chat, myProfileId: string): ChatRou
 
   const currentAgent = chat.users.find(u => u.id === myProfileId)
 
-  if (currentAgent && currentAgent.present) {
-    return "my"
+  if (currentAgent && currentAgent.type === "agent" && currentAgent.present) {
+    if (currentAgent.visibility === "all") {
+      return "my"
+    }
+
+    if (currentAgent.visibility === "agents") {
+      return "supervised"
+    }
+
+    throw new RangeError(`unknown agent visibility: ${JSON.stringify(
+      currentAgent
+    )}`)
   }
 
   const presentAgent = getPresentAgent(chat.users)
@@ -287,10 +297,6 @@ export function getChatRoute(chat: v35.agent.Chat, myProfileId: string): ChatRou
     else {
       return "queued"
     }
-  }
-
-  if (chat.properties.supervising.agent_ids.includes(myProfileId)) {
-    return "supervised"
   }
 
   return "other"
@@ -938,7 +944,7 @@ export function throttle(callback: () => void, timeout: number) {
   return throttled
 }
 
-export function getRandomId(length: number) {
+export function randomStr(length: number) {
   let id = ""
 
   while (id.length < length) {
@@ -1225,6 +1231,29 @@ function mergeEvent(currentEvent: v35.agent.Event, incomingEvent: v35.agent.Even
   }
 }
 
+export function mergeChatProperties(
+  target: v35.agent.ChatProperties,
+  incoming: v35.agent.PartialChatProperties
+): v35.agent.ChatProperties {
+  target = { ...target }
+
+  if (incoming.routing) {
+    target.routing = {
+      ...target.routing,
+      ...incoming.routing,
+    }
+  }
+
+  if (incoming.source) {
+    target.source = {
+      ...target.source,
+      ...incoming.source,
+    }
+  }
+
+  return target
+}
+
 export function getTimezone() {
   if (window.Intl != null && window.Intl.DateTimeFormat != null) {
     return Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -1485,11 +1514,11 @@ export function sortGroups(groups: v35.conf.Group[]) {
 
 export function sortAgents(agents: v35.conf.Agent[], routingStatuses: Map<string, v35.agent.RoutingStatus>) {
   return agents.concat().sort(function (a, b) {
-      const aStatus = routingStatuses.get(a.id)
-      const bStatus = routingStatuses.get(b.id)
+    const aStatus = routingStatuses.get(a.id)
+    const bStatus = routingStatuses.get(b.id)
 
-      return (getRoutingStatusRang(bStatus) - getRoutingStatusRang(aStatus)) || a.name.localeCompare(b.name)
-    })
+    return (getRoutingStatusRang(bStatus) - getRoutingStatusRang(aStatus)) || a.name.localeCompare(b.name)
+  })
 }
 
 export function getRoutingStatusRang(status: v35.agent.RoutingStatus | undefined) {

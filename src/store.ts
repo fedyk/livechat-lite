@@ -425,15 +425,7 @@ export function createStore(initialState: Pick<State, "credentials" | "searchRec
       let user: v35.agent.User
 
       for (agentId of options.agentsIds) {
-        user = users.get(agentId) || {
-          id: agentId,
-          type: "agent",
-          name: "Agent",
-          avatar: "",
-          email: agentId,
-          present: false,
-          events_seen_up_to: new Date(0),
-        }
+        user = users.get(agentId) || emptyChatAgent(agentId)
 
         users.set(agentId, { ...user, present: true })
       }
@@ -442,5 +434,18 @@ export function createStore(initialState: Pick<State, "credentials" | "searchRec
     }
 
     dispatch({ chats: chats.set(options.chatId, chat) })
+  }
+}
+
+function emptyChatAgent(id: string): v35.agent.Agent {
+  return {
+    id,
+    type: "agent",
+    name: "Agent",
+    avatar: "",
+    email: id,
+    present: false,
+    visibility: "all",
+    events_seen_up_to: new Date(0),
   }
 }
