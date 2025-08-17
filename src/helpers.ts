@@ -654,15 +654,18 @@ export function cx(...args: any[]) {
 }
 
 export function getInitials(name: string, defaultInitials = "?") {
-  let regex = new RegExp(/(\p{L}{1})\p{L}+/u, 'g');
-  let initials = [...(name.matchAll(regex) || [])]
-  let result = ((initials.shift()?.[1] || '') + (initials.pop()?.[1] || '')).toUpperCase()
-
-  if (result.length === 0) {
-    defaultInitials
-  }
-
-  return result
+  return String(name)
+    .replace(/[^a-z\s]/gi, "")
+    .trim()
+    .split(" ")
+    .filter(function (a) {
+      return a.trim().length > 0
+    })
+    .map(function (str) {
+      return str.charAt(0).toUpperCase()
+    })
+    .join("")
+    .substring(0, 2) || defaultInitials
 }
 
 export function extractAutocompleteQuery(text: string, currPos: number) {

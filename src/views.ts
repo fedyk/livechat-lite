@@ -3222,7 +3222,7 @@ function createAvatarView(props: AvatarViewProps & {
   }
 
   function randomColor(id: string) {
-    const colors = ["#548057", "#537280", "#58658e", "#394c82", "#745480", "#845b5b", "#a95c4a", "#b1915d", "#d0b454", "#67aca2"]
+    const colors = ["#8609ff", "#ca0005", "#328dff", "#00893c", "#9146ff", "#ff5100", "#06f", "#a372ff", "#b08c00", "#00a449", "#050505"]
 
     return colors[toNum(String(id), 0, colors.length - 1)];
   }
