@@ -3,6 +3,7 @@ body {
   --second-text-color: #616161;
   --main-bg-color: #fff;
   --content-bg-color: #F2F2F7;
+  --note-background-color: #fee3a0;
   --border-color: #e9eaec;
   --active-bg-color: #eeeeee;
   --active-text-color: #ffffff;
@@ -23,6 +24,7 @@ body.dark {
   --second-text-color: #989898;
   --main-bg-color: #121212;
   --content-bg-color: #1e1e1e;
+  --note-background-color: #534611;
   --border-color: #232323;
   --active-bg-color: #2e2e2e;
   --active-color: #0d6efd;
@@ -770,6 +772,10 @@ input.switch-checkbox:checked+label.switch-label:after {
   position: relative;
 }
 
+.composer--supervised {
+  background: var(--note-background-color);
+}
+
 .composer-file {
   position: relative;
   align-self: flex-end;
@@ -813,6 +819,10 @@ input.switch-checkbox:checked+label.switch-label:after {
   font-family: inherit;
   font-size: inherit;
   line-height: inherit;
+}
+
+.composer-input::placeholder {
+  color: var(--main-text-color);
 }
 
 .composer-input:focus {
@@ -988,6 +998,10 @@ button.composer-send:focus {
   color: var(--main-text-color);
   background: var(--content-bg-color);
   box-shadow: rgb(0 0 0 / 10%) 0px 1px 2px;
+}
+
+.message-bubble-note {
+  background-color: var(--note-background-color);
 }
 
 .message-text {

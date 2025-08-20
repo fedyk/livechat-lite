@@ -1,9 +1,10 @@
 import { $Controller } from "./controller.js";
 import { createElement as h, createRef as Ref } from "./dom.js";
-import { createInjector, sortAgents, sortGroups } from "./helpers.js";
+import { createInjector, getColorModeName, sortAgents, sortGroups } from "./helpers.js";
 import { list2 } from "./list.js";
 import { v35 } from "./livechat-api.js";
 import { $Store } from "./store.js";
+import { ColorMode } from "./types.js";
 
 const ESCAPE_KEY = 'Escape'
 const ENTER_KEY = 'Enter'
@@ -407,6 +408,8 @@ function getCommands(): ICommand[] {
   if (routingToggleCommand) {
     commands.push(routingToggleCommand)
   }
+  
+  commands.push(createColorModeCommand())
 
   return commands
 }
@@ -507,6 +510,36 @@ function createRoutingToggleCommand(): ICommand | void {
     else {
       controller.setRoutingStatus("accepting_chats")
     }
+  }
+}
+
+function createColorModeCommand(store = $Store()): ICommand {
+  const { colorMode } = store.getState()
+
+  return {
+    id: `color_mode_command`,
+    title: `Color mode: ${getColorModeName(colorMode)}`,
+    select: select,
+  }
+
+  async function select() {
+    return [
+      createSelectColorModeCommand("light"),
+      createSelectColorModeCommand("dark"),
+      createSelectColorModeCommand("auto")
+    ]
+  }
+}
+
+function createSelectColorModeCommand(colorMode: ColorMode, store = $Store()) {
+  return {
+    id: `select_color_mode_${colorMode}_command`,
+    title: `Color mode: ${getColorModeName(colorMode)}`,
+    select: select,
+  }
+
+  async function select() {
+    store.dispatch({ colorMode })
   }
 }
 

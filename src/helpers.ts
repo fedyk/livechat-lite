@@ -1,4 +1,4 @@
-import type { Unsubscriber } from "./types.js";
+import type { ColorMode, Unsubscriber } from "./types.js";
 import { v35 } from "./livechat-api.js";
 import { PersistentState, State } from "./store.js";
 import { ChatEntity, ChatRoute, SearchResult, SneakPeekAsEvent } from "./types.js"
@@ -631,7 +631,7 @@ export function sneakPeekToMessage(sneakPeek: v35.agent.SneakPeek): SneakPeekAsE
   }
 }
 
-export function cx(...args: any[]) {
+export function cx(...args: (string | { [key: string]: boolean })[]) {
   let className = ""
 
   for (let i = 0; i < args.length; i++) {
@@ -1534,5 +1534,14 @@ export function getRoutingStatusRang(status: v35.agent.RoutingStatus | undefined
       return 1;
     default:
       return 0;
+  }
+}
+
+export function getColorModeName(colorMode: ColorMode) {
+  switch (colorMode) {
+    case "light": return "Light"
+    case "dark": return "Dark"
+    case "auto": return "Auto"
+    default: return colorMode
   }
 }

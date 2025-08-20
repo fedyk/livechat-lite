@@ -218,19 +218,19 @@ function createMainHeaderView(options: {
               className: "segment-button",
               ref: lightColorModeBtnRef,
               onclick: () => store.dispatch({ colorMode: "light" })
-            }, "Light"),
+            }, helpers.getColorModeName("light")),
             h("span", { className: "segment-separator" }),
             h("button", {
               className: "segment-button",
               ref: darkColorModeBtnRef,
               onclick: () => store.dispatch({ colorMode: "dark" })
-            }, "Dark"),
+            }, helpers.getColorModeName("dark")),
             h("span", { className: "segment-separator" }),
             h("button", {
               className: "segment-button",
               ref: autoColorModeBtnRef,
               onclick: () => store.dispatch({ colorMode: "auto" })
-            }, "Auto")
+            }, helpers.getColorModeName("auto"))
           )
         ),
 
@@ -1710,26 +1710,30 @@ let composerCounter = 0
 
 function createComposerView(props: {
   chatId: string
-}) {
-  const store = $Store()
+}, store = $Store(), controller = $Controller(), chatRouter = $ChatRouter()) {
   const composerId = `composer_${++composerCounter}`
-  const controller = $Controller()
-  const chatRouter = $ChatRouter()
   const inputContainerRef = Ref<HTMLLabelElement>()
   const inputRef = Ref<HTMLTextAreaElement>()
   const sendButtonRef = Ref<HTMLButtonElement>()
   const fileInputRef = Ref<HTMLInputElement>()
-  let chatRoute: ChatRoute
-  let chatGroupIds: number[] = [0]
-  const composerActions = new ComposerActions({ items: [] })
+  const composerActionsRef = Ref<ComposerActions>()
   const listeners = helpers.createUnsubscribers()
+  let chatGroupIds: number[] = [0]
+  let chatRoute = controller.getCurrentChatRoute(props.chatId)
   let autoResize: AutoResize | null = null
   let autocompleteKey = ""
   let autocompleteQuery = ""
   let cannedResponses: Record<number, rest.CannedResponse[]>
 
-  const el = h("div", { className: "composer" },
-    composerActions.el,
+  const el = h("div", {
+    className: helpers.cx("composer", {
+      "composer--supervised": chatRoute === "supervised"
+    })
+  },
+    new ComposerActions({
+      items: [],
+      ref: composerActionsRef,
+    }).el,
 
     h("div", { className: "d-flex flex-direction-row" },
       h("label", { className: "composer-file" },
@@ -1752,13 +1756,16 @@ function createComposerView(props: {
           id: composerId,
           rows: 1,
           className: "composer-input",
-          placeholder: "Write a message...",
-          ref: inputRef
+          placeholder: placeholderText(),
+          ref: inputRef,
+          onkeydown: onInputKeyDown,
+          onkeyup: onInutKeyUp,
         }),
         h("button", {
           className: "composer-send",
           ref: sendButtonRef,
-          disabled: true
+          disabled: true,
+          onclick: handleSend,
         },
           createIconEl({ name: "arrow-right-circle", size: "1.5em" })
         )
@@ -1766,25 +1773,7 @@ function createComposerView(props: {
     )
   )
 
-  if (inputRef.current) {
-    autoResize = createAutoResize(inputRef.current)
-
-    inputRef.current.onkeydown = function (event) {
-      handleKeyDown(event)
-      render()
-    }
-
-    inputRef.current.onkeyup = function (event) {
-      handleKeyUp(event)
-      render()
-    }
-  }
-
-  if (sendButtonRef.current) {
-    listeners.add(dom.addListener(sendButtonRef.current, "click", function () {
-      handleSend()
-    }))
-  }
+  autoResize = createAutoResize(inputRef.current)
 
   listeners.add(chatRouter.onChatRouteChange(function (t) {
     if (t.chatId === props.chatId) {
@@ -1793,7 +1782,7 @@ function createComposerView(props: {
     }
   }))
 
-  listeners.add(composerActions.addListener("selected", function (item) {
+  listeners.add(composerActionsRef.current.addListener("selected", function (item) {
     if (autocompleteKey.length > 0) {
       replaceAutocompleteQuery(item.text)
       render()
@@ -1830,17 +1819,14 @@ function createComposerView(props: {
 
     listeners.removeAll()
 
-    if (inputContainerRef.current) {
-      inputContainerRef.current = null!
-    }
+    inputContainerRef.current = null!
 
-    if (inputRef.current) {
-      inputRef.current.onkeydown = null
-      inputRef.current.onkeyup = null
-      inputRef.current = null!
-    }
+    inputRef.current.onkeydown = null
+    inputRef.current.onkeyup = null
+    inputRef.current = null!
 
     if (sendButtonRef.current) {
+      sendButtonRef.current.onclick = null
       sendButtonRef.current = null!
     }
 
@@ -1848,6 +1834,11 @@ function createComposerView(props: {
       fileInputRef.current.onchange = null!
       fileInputRef.current.onpaste = null!
       fileInputRef.current = null!
+    }
+
+    if (composerActionsRef.current) {
+      composerActionsRef.current.dispose()
+      composerActionsRef.current = null!
     }
 
     el.remove()
@@ -1870,7 +1861,7 @@ function createComposerView(props: {
 
   function handleKeyDown(event: KeyboardEvent) {
     if (autocompleteKey.length > 0) {
-      composerActions.handleKeyDown(event)
+      composerActionsRef.current.handleKeyDown(event)
     }
 
     if (event.defaultPrevented) {
@@ -1882,6 +1873,16 @@ function createComposerView(props: {
       handleSend()
       return
     }
+  }
+
+  function onInputKeyDown(event: KeyboardEvent) {
+    handleKeyDown(event)
+    render()
+  }
+
+  function onInutKeyUp(event: KeyboardEvent) {
+    handleKeyUp(event)
+    render()
   }
 
   function handleKeyUp(event: KeyboardEvent) {
@@ -1897,7 +1898,7 @@ function createComposerView(props: {
     autocompleteQuery = autocomplete.query
 
     if (autocompleteKey.length > 0) {
-      composerActions.handleKeyUp(event)
+      composerActionsRef.current.handleKeyUp(event)
     }
 
     if (sendButtonRef.current) {
@@ -1952,6 +1953,10 @@ function createComposerView(props: {
   }
 
   function render() {
+    el.classList.toggle("composer--supervised", chatRoute === "supervised")
+
+    inputRef.current.placeholder = placeholderText()
+
     if (autocompleteKey.length > 0) {
       const groupIds = helpers.unique([0], chatGroupIds)
 
@@ -1978,10 +1983,18 @@ function createComposerView(props: {
         items = items.filter(item => item.title.includes(autocompleteQuery));
       }
 
-      composerActions.setProps({ items })
+      composerActionsRef.current.setProps({ items })
 
-      composerActions.toggle(autocompleteKey.length > 0 && items.length > 0)
+      composerActionsRef.current.toggle(autocompleteKey.length > 0 && items.length > 0)
     }
+  }
+
+  function placeholderText() {
+    if (chatRoute === "supervised") {
+      return "Write a private note… The customer can’t see this."
+    }
+
+    return "Write a message..."
   }
 }
 
@@ -2068,6 +2081,7 @@ interface ComposerActionsListItem {
 
 interface ComposerActionsProps {
   items: ComposerActionsListItem[]
+  ref?: dom.Ref<ComposerActions>
 }
 
 interface ComposerActionsEvents {
@@ -2081,6 +2095,10 @@ class ComposerActions extends helpers.TypedEventEmitter<ComposerActionsEvents> {
 
   constructor(protected props: ComposerActionsProps) {
     super()
+
+    if (props.ref) {
+      props.ref.current = this
+    }
 
     this.el = h("div", { className: "composer-actions" },
       this.listEl = h("div", { className: "composer-actions-list" })
@@ -2259,10 +2277,11 @@ function createTextMessageView(props: MessageViewProps<v35.agent.MessageEvent>):
         ref: avatarViewRef
       }).el
     ),
-    h("div", { className: "message-bubble" },
+    h("div", { className: `message-bubble ${props.message.visibility === "agents" ? "message-bubble-note" : ""}` },
       !myMessage && props.author && h("div", {
         className: "text-small text-secondary text-ellipsis"
       }, props.author.name),
+
       h("div", { className: "message-text" },
         props.message.text,
         createMessageIndicatorView({
@@ -2408,7 +2427,7 @@ function createFileMessageView(props: MessageViewProps<v35.agent.FileEvent>): Me
   }
   else {
     el.append(
-      h("div", { className: "message-bubble" },
+      h("div", { className: `message-bubble ${props.message.visibility === "agents" ? "message-bubble-note" : ""}` },
         h("div", { className: "message-file" },
           h("div", { className: "message-file-icon" },
             icons.createFileEarmarkIcon({ size: 24, ref: fileEarmarkRef }),
@@ -2559,7 +2578,7 @@ function createRichMessageMessageView(props: MessageViewProps<v35.agent.RichMess
     props.message.template_id === "quick_replies" && h("div", { className: "message-quick-replies" },
       ...props.message.elements.map(function (element) {
         return f(
-          element.title && h("div", { className: "message-bubble" },
+          element.title && h("div", { className: `message-bubble ${props.message.visibility === "agents" ? "message-bubble-note" : ""}` },
             !myMessage && props.author && (
               h("div", { className: "text-small text-secondary" }, props.author.name)
             ),
@@ -2668,7 +2687,7 @@ function createFilledFormMessageView(props: MessageViewProps<v35.agent.FilledFor
         ref: avatarViewRef
       }).el
     ),
-    h("div", { className: "message-bubble" },
+    h("div", { className: `message-bubble ${props.message.visibility === "agents" ? "message-bubble-note" : ""}` },
       !myMessage && props.author && h("div", {
         className: "text-small text-secondary text-ellipsis"
       }, props.author.name),
