@@ -1831,11 +1831,11 @@ export namespace v35 {
       if (p.routing && hasPropertyValue(properties, "routing", "continuous")) {
         p.routing.continuous = getPropertyValue<boolean>(properties, "routing", "continuous", false)
       }
-      
+
       if (p.routing && hasPropertyValue(properties, "routing", "pinned")) {
         p.routing.pinned = getPropertyValue<boolean>(properties, "routing", "pinned", false)
       }
-      
+
       if (p.source && hasPropertyValue(properties, "source", "customer_client_id")) {
         p.source.customer_client_id = getPropertyValue<string>(properties, "source", "customer_client_id", "")
       }

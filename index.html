@@ -10,6 +10,26 @@
   <meta name="theme-color" content="#ffffff" />
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
+  <script>
+    window.sentryOnLoad = function () {
+      Sentry.init({
+        beforeSend(event, hint) {
+          const err = hint.originalException;
+
+          if (err && err.data) event.extra = Object.assign({}, event.extra, { err_data: err.data})
+          if (err && err.type) event.extra = Object.assign({}, event.extra, { err_type: err.type })
+          if (err && err.status) event.extra = Object.assign({}, event.extra, { err_status: err.status})
+
+          return event
+        }
+      })
+    }
+  </script>
+  <script
+    async
+    crossorigin="anonymous"
+    src="https://js.sentry-cdn.com/ca630b36edae02a1f380641729a55434.min.js"
+  ></script>
 </head>
 
 <body>
