@@ -1494,7 +1494,7 @@ input.form-control.invalid {
   border: none;
   outline: none;
   background: none;
-  color: #4384f5;
+  color: var(--second-text-color);
   font-weight: 600;
   font-size: 1rem;
   transition: color 0.2s;
@@ -1511,17 +1511,22 @@ input.form-control.invalid {
   right: 4px;
   height: 4px;
   border-radius: 2px 2px 0 0;
-  background-color: rgb(67, 132, 245);
-  transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+  background-color: var(--second-text-color);
+  transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out, background-color 0.2s ease-in-out;
   transform-origin: bottom;
   transform: scaleX(0.3) scaleY(0);
   opacity: 0;
+}
+
+.tab.active {
+  color: var(--active-color);
 }
 
 .tab:hover::before,
 .tab.active::before {
   opacity: 1;
   transform: scaleX(1) scaleY(1);
+  background-color: var(--active-color);
 }
 
 .tab-panel {
@@ -1539,9 +1544,13 @@ input.form-control.invalid {
   height: 18px;
   line-height: 17px;
   border-radius: 50%;
-  background: #4384f5;
+  background: var(--second-text-color);
   color: #fff;
   font-size: .7rem;
+}
+
+.tab.active .tab-badge {
+  background-color: var(--active-color);
 }
 
 .btn {
