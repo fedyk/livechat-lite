@@ -1674,18 +1674,20 @@ export function createController(options: ControllerOptions) {
 
   async function syncAgents() {
     const accessToken = await getAccessToken()
+    const signal = AbortSignal.timeout(30_000)
+    const agents = await v35.conf.listAgents(accessToken, {}, signal)
 
-    return v35.conf.listAgents(accessToken, {}).then(function (agents) {
-      store.dispatch({ agents })
-    })
+    store.dispatch({ agents })
   }
 
   async function syncGroups() {
     const accessToken = await getAccessToken()
+    const signal = AbortSignal.timeout(30_000)
+    const groups = await v35.conf.listGroups(accessToken, {
+      fields: ["routing_status"]
+    }, signal)
 
-    return v35.conf.listGroups(accessToken, { fields: ["routing_status"] }).then(function (groups) {
-      store.dispatch({ groups })
-    })
+    store.dispatch({ groups })
   }
 
   async function maybeSyncGroups() {

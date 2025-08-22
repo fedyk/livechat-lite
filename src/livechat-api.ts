@@ -3000,7 +3000,7 @@ export namespace v35 {
     export interface Agent {
       id: string
       name: string
-      avatar: string
+      avatar_path: string
       job_title: string
     }
 
@@ -3008,6 +3008,12 @@ export namespace v35 {
       id: number
       name: string
       routing_status: agent.RoutingStatus
+    }
+
+    export interface Channel {
+      channel_type: "code" | "direct_link" | "integration"
+      channel_subtype: string
+      first_activity_timestamp: string
     }
 
     /**
@@ -3020,24 +3026,33 @@ export namespace v35 {
       }
     }
 
-    export function listAgents(accessToken: string, payload: listAgents$Payload) {
+    export function listAgents(accessToken: string, payload: listAgents$Payload, signal: AbortSignal) {
       return fetch("https://api.livechatinc.com/v3.5/configuration/action/list_agents", {
         headers: getRequestHeaders(accessToken),
         method: "POST",
         body: JSON.stringify(payload),
+        signal,
       }).then(parseResponse).then(parseAgents)
     }
 
-    interface listGroups$Payload {
+    export function listGroups(accessToken: string, payload: {
       fields?: string[]
-    }
-
-    export function listGroups(accessToken: string, payload: listGroups$Payload) {
+    }, signal: AbortSignal) {
       return fetch("https://api.livechatinc.com/v3.5/configuration/action/list_groups", {
         headers: getRequestHeaders(accessToken),
         method: "POST",
         body: JSON.stringify(payload),
-      }).then(parseResponse).then(parseGroups)
+        signal,
+      }).then(parseResponse<Group[]>)
+    }
+
+    export function listlChannels(token: string, signal: AbortSignal) {
+      return fetch("https://api.livechatinc.com/v3.6/configuration/action/list_channels", {
+        headers: getRequestHeaders(token),
+        method: "POST",
+        body: JSON.stringify({}),
+        signal,
+      }).then(parseResponse<Channel>)
     }
 
     /**
@@ -3053,26 +3068,8 @@ export namespace v35 {
 
     function parseAgent(agent: any): Agent {
       return {
-        id: String(agent.id),
-        name: String(agent.name ?? ""),
-        avatar: parseAvatarUrl(agent.avatar_path),
-        job_title: String(agent.job_title),
-      }
-    }
-
-    function parseGroups(groups: any): Group[] {
-      if (!Array.isArray(groups)) {
-        throw new RangeError("`groups` should be an list")
-      }
-
-      return groups.map(parseGroup)
-    }
-
-    function parseGroup(group: any): Group {
-      return {
-        id: Number(group.id),
-        name: String(group.name ?? ""),
-        routing_status: agent.parseRoutingStatus(group.routing_status)
+        ...agent,
+        avatar_path: parseAvatarUrl(agent.avatar_path),
       }
     }
   }
@@ -3109,9 +3106,14 @@ function parseAvatarUrl(avatarUrl?: string) {
     return ""
   }
 
-  if (avatarUrl.startsWith("http")) {
+  if (avatarUrl.startsWith("https://")) {
     return avatarUrl
   }
+
+  if (avatarUrl.startsWith("http://")) {
+    return avatarUrl.replace("http://", "https://")
+  }
+
 
   return `https://${avatarUrl}`
 }
