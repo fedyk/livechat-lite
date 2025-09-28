@@ -2,9 +2,9 @@ import { $Controller } from "./controller.js"
 import * as dom from "./dom.js"
 import {
   createElement as h,
-  createElementNS as hNS,
+  createElementNS as svg,
   createFragment as f,
-  createRef as Ref
+  createRef as Ref,
 } from "./dom.js"
 import * as helpers from "./helpers.js"
 import {
@@ -33,6 +33,8 @@ import type {
   SearchResult,
   SneakPeekAsEvent
 } from "./types.js"
+
+const LOADER_ICONS_R = 8.5
 
 export function createAppView() {
   const el = h("div", { className: "app" })
@@ -170,7 +172,7 @@ function createMainHeaderView(options: {
         className: "header-menu-button",
         onmousedown: onToggleMenu,
       },
-        createAvatarView({
+        AvatarView({
           ref: myAvatarRef,
           id: "",
           size: 32,
@@ -183,7 +185,7 @@ function createMainHeaderView(options: {
         ref: backButtonElRef,
         className: "header-menu-button",
         onmousedown: onCloseSearch,
-      }, icons.createArrowBackIcon({ size: 24 })),
+      }, ArrowBackIcon({ size: 24 })),
 
       h("div", { className: "dropdown-menu", ref: dropdownMenuElRef },
         h("div", { className: "px-3 py-2" },
@@ -253,7 +255,7 @@ function createMainHeaderView(options: {
         className: "header-input-button d-none",
         ref: searchButtonElRef,
         onclick: onClearSearch
-      }, icons.createCloseIcon({ size: 20 }))
+      }, CloseIcon({ size: 20 }))
     )
   )
 
@@ -936,7 +938,7 @@ function createChatSearchResultsView(options: ChatSearchResultsViewOptions) {
           }
         },
           h("div", {},
-            createAvatarView({
+            AvatarView({
               ref: ctx.avatarViewRef,
               id: ctx.value.userId,
               size: 48,
@@ -1068,7 +1070,7 @@ class ChatsListItemView {
       if (user && !this.itemAvatar) {
         this.itemAvatarEl.append(
           (
-            this.itemAvatar = createAvatarView({
+            this.itemAvatar = AvatarView({
               id: user.id,
               size: 48,
               alt: user.name,
@@ -1386,7 +1388,7 @@ function createChatHeaderView(props: {
       if (props.user && !headerAvatar) {
         headerAvatarEl.append(
           (
-            headerAvatar = createAvatarView({
+            headerAvatar = AvatarView({
               id: props.user.id,
               size: 36,
               alt: props.user.name,
@@ -1563,7 +1565,7 @@ function createChatBodyView(props: ChatBodyViewProps): ChatBodyView {
     const customer = helpers.getChatRecipient(chat.users)
 
     list2<ChatEntity, {
-      view: MessageView<ChatEntity>
+      view: Message<ChatEntity>
     }>({
       target: messagesElRef.current,
       values: chatEntities,
@@ -1571,7 +1573,7 @@ function createChatBodyView(props: ChatBodyViewProps): ChatBodyView {
       enter(ctx) {
         const fileUpload = ctx.value.type === "file" && ctx.value.custom_id ? filesUpload.get(ctx.value.custom_id) : null
 
-        ctx.view = factoryMessageView({
+        ctx.view = Message({
           message: ctx.value,
           nextMessage: chatEntities[ctx.index + 1],
           prevMessage: chatEntities[ctx.index - 1],
@@ -1683,7 +1685,7 @@ function createChatBodyView(props: ChatBodyViewProps): ChatBodyView {
   function highlightEvent(eventId: string) {
     for (let i = 0; i < messagesElRef.current.children.length; i++) {
       const messageEl = messagesElRef.current.children[i] as ElementWithContext<
-        BaseContext<ChatEntity> & { view: MessageView }
+        BaseContext<ChatEntity> & { view: Message }
       >
 
       const messageData = messageEl.$context.value
@@ -1737,7 +1739,7 @@ function createComposerView(props: {
 
     h("div", { className: "d-flex flex-direction-row" },
       h("label", { className: "composer-file" },
-        icons.createAttachIcon({ size: 21 }),
+        AttachIcon({ size: 21 }),
         h("input", {
           type: "file",
           multiple: true,
@@ -2197,7 +2199,7 @@ class ComposerActions extends helpers.TypedEventEmitter<ComposerActionsEvents> {
   }
 }
 
-export interface MessageView<T = ChatEntity> {
+export interface Message<T = ChatEntity> {
   el: HTMLElement
   dispose(): void
   highlight(): void
@@ -2216,7 +2218,7 @@ export interface MessageViewProps<T = ChatEntity> {
   progressSignal: ProgressSignal | null
 }
 
-export function factoryMessageView(props: MessageViewProps<ChatEntity>): MessageView<ChatEntity> {
+function Message(props: MessageViewProps<ChatEntity>): Message<ChatEntity> {
   const message = props.message
   const nextMessage = props.nextMessage
   const prevMessage = props.prevMessage
@@ -2227,54 +2229,57 @@ export function factoryMessageView(props: MessageViewProps<ChatEntity>): Message
   const progressSignal = props.progressSignal
 
   if (message.type === "message") {
-    return createTextMessageView({ message, nextMessage, prevMessage, author, myProfileId, isMessageSeen, abortController: abortSignal, progressSignal })
+    return TextMessage({ message, nextMessage, prevMessage, author, myProfileId, isMessageSeen, abortController: abortSignal, progressSignal })
   }
 
   if (message.type === "file") {
-    return createFileMessageView({ message, nextMessage, prevMessage, author, myProfileId, isMessageSeen, abortController: abortSignal, progressSignal })
+    return FileMessage({ message, nextMessage, prevMessage, author, myProfileId, isMessageSeen, abortController: abortSignal, progressSignal })
   }
 
   if (message.type === "filled_form") {
-    return createFilledFormMessageView({ message, nextMessage, prevMessage, author, myProfileId, isMessageSeen, abortController: abortSignal, progressSignal })
+    return FilledFormMessage({ message, nextMessage, prevMessage, author, myProfileId, isMessageSeen, abortController: abortSignal, progressSignal })
   }
 
   if (message.type === "rich_message") {
-    return createRichMessageMessageView({ message, nextMessage, prevMessage, author, myProfileId, isMessageSeen, abortController: abortSignal, progressSignal })
+    return RichMessageMessage({ message, nextMessage, prevMessage, author, myProfileId, isMessageSeen, abortController: abortSignal, progressSignal })
   }
 
   if (message.type === "system_message") {
-    return createSystemMessageView({ message, nextMessage, prevMessage, author, myProfileId, isMessageSeen, abortController: abortSignal, progressSignal })
+    return SystemMessage({ message, nextMessage, prevMessage, author, myProfileId, isMessageSeen, abortController: abortSignal, progressSignal })
   }
 
   if (message.type === "restricted_thread") {
-    return createRestrictedThreadMessageView({ message, nextMessage, prevMessage, author, myProfileId, isMessageSeen, abortController: abortSignal, progressSignal })
+    return RestrictedThreadMessage({ message, nextMessage, prevMessage, author, myProfileId, isMessageSeen, abortController: abortSignal, progressSignal })
   }
 
   if (message.type === "chat_gap") {
-    return createChatGapMessageView({ message, nextMessage, prevMessage, author, myProfileId, isMessageSeen, abortController: abortSignal, progressSignal })
+    return ChatGapMessage({ message, nextMessage, prevMessage, author, myProfileId, isMessageSeen, abortController: abortSignal, progressSignal })
   }
 
   if (message.type === "sneak_peek") {
-    return createSneakPeekMessageView({ message, nextMessage, prevMessage, author, myProfileId, isMessageSeen, abortController: abortSignal, progressSignal })
+    return SneakPeekMessage({ message, nextMessage, prevMessage, author, myProfileId, isMessageSeen, abortController: abortSignal, progressSignal })
   }
 
-  return createUnsupportedMessageView({ message, nextMessage, prevMessage, author, myProfileId, isMessageSeen, abortController: abortSignal, progressSignal })
+  return UnsupportedMessage({ message, nextMessage, prevMessage, author, myProfileId, isMessageSeen, abortController: abortSignal, progressSignal })
 }
 
-function createTextMessageView(props: MessageViewProps<v35.agent.MessageEvent>): MessageView<v35.agent.MessageEvent> {
-  const avatarViewRef = Ref<AvatarView>()
-  const messageIndicatorRef = Ref<MessageIndicatorView>()
+function TextMessage(props: MessageViewProps<v35.agent.MessageEvent>): Message<v35.agent.MessageEvent> {
+  const avatarRef = Ref<AvatarView>()
+  const indicatorRef = Ref<MessageIndicator>()
   const myMessage = props.author?.id === props.myProfileId
-  const el = h("div", { className: `message ${myMessage ? "right" : "left"}` },
+  const html = helpers.linkify(props.message.text)
+  const el = h("div", {
+    className: helpers.cx("message", myMessage ? "right" : "left"),
+  },
     props.author && !myMessage && h("div", {
       className: "message-avatar",
     },
-      createAvatarView({
+      AvatarView({
         id: props.author.id,
         alt: props.author.name,
         src: props.author.avatar,
         size: 36,
-        ref: avatarViewRef
+        ref: avatarRef
       }).el
     ),
     h("div", { className: `message-bubble ${props.message.visibility === "agents" ? "message-bubble-note" : ""}` },
@@ -2283,40 +2288,42 @@ function createTextMessageView(props: MessageViewProps<v35.agent.MessageEvent>):
       }, props.author.name),
 
       h("div", { className: "message-text" },
-        props.message.text,
-        createMessageIndicatorView({
+        h("div", {
+          innerHTML: html
+        }),
+        MessageIndicator({
           time: helpers.formatTime(props.message.created_at),
           status: props.messageStatus,
           isMessageSeen: props.isMessageSeen,
-          ref: messageIndicatorRef
+          ref: indicatorRef
         }).el
       )
     )
   )
 
-  return { el, dispose, update, highlight }
+  return {
+    el,
+    dispose,
+    update,
+    highlight
+  }
 
   function dispose() {
-    if (messageIndicatorRef.current) {
-      messageIndicatorRef.current.dispose()
-      messageIndicatorRef.current = null!
-    }
-
-    if (avatarViewRef.current) {
-      avatarViewRef.current.dispose()
-      avatarViewRef.current = null!
-    }
+    indicatorRef.current?.dispose()
+    indicatorRef.current = null!
+    avatarRef.current?.dispose()
+    avatarRef.current = null!
 
     el.remove()
   }
 
   function update(props: MessageViewProps<v35.agent.MessageEvent>) {
-    if (messageIndicatorRef.current) {
-      messageIndicatorRef.current.update({
+    if (indicatorRef.current) {
+      indicatorRef.current.update({
         time: helpers.formatTime(props.message.created_at),
         status: props.messageStatus,
         isMessageSeen: props.isMessageSeen,
-        ref: messageIndicatorRef
+        ref: indicatorRef
       })
     }
   }
@@ -2326,8 +2333,8 @@ function createTextMessageView(props: MessageViewProps<v35.agent.MessageEvent>):
   }
 }
 
-function createFileMessageView(props: MessageViewProps<v35.agent.FileEvent>): MessageView<v35.agent.FileEvent> {
-  const messageIndicatorRef = Ref<MessageIndicatorView>()
+function FileMessage(props: MessageViewProps<v35.agent.FileEvent>): Message<v35.agent.FileEvent> {
+  const messageIndicatorRef = Ref<MessageIndicator>()
   const avatarViewRef = Ref<AvatarView>()
   const progressButtonRef = Ref<ProgressButton>()
   const subtitleRef = Ref<HTMLDivElement>()
@@ -2335,13 +2342,16 @@ function createFileMessageView(props: MessageViewProps<v35.agent.FileEvent>): Me
   const progressLabelRef = Ref<HTMLDivElement>()
   const fileEarmarkRef = Ref<SVGSVGElement>()
   const myMessage = props.author?.id === props.myProfileId
-  const el = h("div", { className: `message ${myMessage ? "right" : "left"}` })
+  const el = h("div", {
+    className: helpers.cx("message", myMessage ? "right" : "left"),
+  })
+
   let progressSignal = props.progressSignal
 
   if (props.author && !myMessage) {
     el.append(
       h("div", { className: "message-avatar" },
-        createAvatarView({
+        AvatarView({
           id: props.author.id,
           alt: props.author.name,
           src: props.author.avatar,
@@ -2369,7 +2379,7 @@ function createFileMessageView(props: MessageViewProps<v35.agent.FileEvent>): Me
       width,
       height,
     }),
-      createMessageIndicatorView({
+      MessageIndicator({
         sticky: true,
         contrast: true,
         time: helpers.formatTime(props.message.created_at),
@@ -2405,7 +2415,7 @@ function createFileMessageView(props: MessageViewProps<v35.agent.FileEvent>): Me
         }),
         h("p", {}, "Your browser does not support the video. ", h("a", { href: props.message.url, download: props.message.name }, "Download")),
       ),
-      createMessageIndicatorView({
+      MessageIndicator({
         sticky: true,
         contrast: true,
         time: helpers.formatTime(props.message.created_at),
@@ -2430,7 +2440,7 @@ function createFileMessageView(props: MessageViewProps<v35.agent.FileEvent>): Me
       h("div", { className: `message-bubble ${props.message.visibility === "agents" ? "message-bubble-note" : ""}` },
         h("div", { className: "message-file" },
           h("div", { className: "message-file-icon" },
-            icons.createFileEarmarkIcon({ size: 24, ref: fileEarmarkRef }),
+            FileEarmarkIcon({ size: 24, ref: fileEarmarkRef }),
             createProgressButton({
               ref: progressButtonRef,
               progress: 0,
@@ -2445,7 +2455,7 @@ function createFileMessageView(props: MessageViewProps<v35.agent.FileEvent>): Me
             h("div", { className: "text-secondary" },
               h("span", { ref: subtitleRef }, helpers.formatSize(props.message.size, true)),
               h("span", { ref: progressLabelRef }, "Loading..."),
-              createMessageIndicatorView({
+              MessageIndicator({
                 time: helpers.formatTime(props.message.created_at),
                 status: props.messageStatus,
                 isMessageSeen: props.isMessageSeen,
@@ -2495,7 +2505,6 @@ function createFileMessageView(props: MessageViewProps<v35.agent.FileEvent>): Me
   }
 
   function update(nextProps: MessageViewProps<v35.agent.FileEvent>) {
-
     if (messageIndicatorRef.current) {
       messageIndicatorRef.current.update({
         time: helpers.formatTime(nextProps.message.created_at),
@@ -2558,14 +2567,16 @@ function createFileMessageView(props: MessageViewProps<v35.agent.FileEvent>): Me
   }
 }
 
-function createRichMessageMessageView(props: MessageViewProps<v35.agent.RichMessageEvent>): MessageView<v35.agent.RichMessageEvent> {
+function RichMessageMessage(props: MessageViewProps<v35.agent.RichMessageEvent>): Message<v35.agent.RichMessageEvent> {
   const avatarViewRef = Ref<AvatarView>()
-  const messageIndicatorRef = Ref<MessageIndicatorView>()
+  const messageIndicatorRef = Ref<MessageIndicator>()
   const myMessage = props.author?.id === props.myProfileId
-  const el = h("div", { className: `message ${myMessage ? "right" : "left"}` },
+  const el = h("div", {
+    className: `message ${myMessage ? "right" : "left"}`
+  },
     props.author && !myMessage && (
       h("div", { className: "message-avatar" },
-        createAvatarView({
+        AvatarView({
           id: props.author.id,
           alt: props.author.name,
           src: props.author.avatar,
@@ -2585,7 +2596,7 @@ function createRichMessageMessageView(props: MessageViewProps<v35.agent.RichMess
 
             h("div", { className: "message-text" },
               element.title,
-              createMessageIndicatorView({
+              MessageIndicator({
                 time: helpers.formatTime(props.message.created_at),
                 status: props.messageStatus,
                 isMessageSeen: props.isMessageSeen,
@@ -2671,15 +2682,17 @@ function createRichMessageMessageView(props: MessageViewProps<v35.agent.RichMess
   }
 }
 
-function createFilledFormMessageView(props: MessageViewProps<v35.agent.FilledFormEvent>): MessageView<v35.agent.FilledFormEvent> {
+function FilledFormMessage(props: MessageViewProps<v35.agent.FilledFormEvent>): Message<v35.agent.FilledFormEvent> {
   const avatarViewRef = Ref<AvatarView>()
-  const messageIndicatorRef = Ref<MessageIndicatorView>()
+  const messageIndicatorRef = Ref<MessageIndicator>()
   const myMessage = props.author?.id === props.myProfileId
-  const el = h("div", { className: `message ${myMessage ? "right" : "left"}` },
+  const el = h("div", {
+    className: `message ${myMessage ? "right" : "left"}`
+  },
     props.author && !myMessage && h("div", {
       className: "message-avatar",
     },
-      createAvatarView({
+      AvatarView({
         id: props.author.id,
         alt: props.author.name,
         src: props.author.avatar,
@@ -2701,7 +2714,7 @@ function createFilledFormMessageView(props: MessageViewProps<v35.agent.FilledFor
             h("div", { className: "text-primary" }, helpers.stringifyFilledFormAnswer(field.answer || field.answers))
           )
         }),
-        createMessageIndicatorView({
+        MessageIndicator({
           time: helpers.formatTime(props.message.created_at),
           status: props.messageStatus,
           isMessageSeen: props.isMessageSeen,
@@ -2730,7 +2743,7 @@ function createFilledFormMessageView(props: MessageViewProps<v35.agent.FilledFor
   }
 }
 
-function createSystemMessageView(props: MessageViewProps<v35.agent.SystemMessageEvent>): MessageView<v35.agent.SystemMessageEvent> {
+function SystemMessage(props: MessageViewProps<v35.agent.SystemMessageEvent>): Message<v35.agent.SystemMessageEvent> {
   const el = h("div", { className: "message message-system text-secondary" },
     props.message.text
   )
@@ -2750,7 +2763,7 @@ function createSystemMessageView(props: MessageViewProps<v35.agent.SystemMessage
   }
 }
 
-function createRestrictedThreadMessageView(props: MessageViewProps<RestrictedThread>): MessageView<RestrictedThread> {
+function RestrictedThreadMessage(props: MessageViewProps<RestrictedThread>): Message<RestrictedThread> {
   const el = h("div", { className: "message center" },
     h("div", { className: "text-secondary" }, props.message.text)
   )
@@ -2766,7 +2779,7 @@ function createRestrictedThreadMessageView(props: MessageViewProps<RestrictedThr
   function highlight() { }
 }
 
-function createChatGapMessageView(props: MessageViewProps<ChatGap>): MessageView<ChatGap> {
+function ChatGapMessage(props: MessageViewProps<ChatGap>): Message<ChatGap> {
   const el = h("div", { className: "message" },
     "Loading chat messages..."
   )
@@ -2786,7 +2799,7 @@ function createChatGapMessageView(props: MessageViewProps<ChatGap>): MessageView
   }
 }
 
-function createSneakPeekMessageView(props: MessageViewProps<SneakPeekAsEvent>): MessageView<SneakPeekAsEvent> {
+function SneakPeekMessage(props: MessageViewProps<SneakPeekAsEvent>): Message<SneakPeekAsEvent> {
   const avatarViewRef = Ref<AvatarView>()
   const myMessage = props.author?.id === props.myProfileId
   const textElRef = Ref<HTMLSpanElement>()
@@ -2794,7 +2807,7 @@ function createSneakPeekMessageView(props: MessageViewProps<SneakPeekAsEvent>): 
     props.author && !myMessage && h("div", {
       className: "message-avatar",
     },
-      createAvatarView({
+      AvatarView({
         id: props.author.id,
         alt: props.author.name,
         src: props.author.avatar,
@@ -2838,7 +2851,7 @@ function createSneakPeekMessageView(props: MessageViewProps<SneakPeekAsEvent>): 
   }
 }
 
-function createUnsupportedMessageView(props: MessageViewProps<any>): MessageView<any> {
+function UnsupportedMessage(props: MessageViewProps<any>): Message<any> {
   const el = h("div", { className: "message" },
     "Unsupported message..."
   )
@@ -2858,7 +2871,7 @@ function createUnsupportedMessageView(props: MessageViewProps<any>): MessageView
   }
 }
 
-interface MessageIndicatorView {
+interface MessageIndicator {
   el: HTMLDivElement
   dispose(): void
   update(props: MessageIndicatorProps): void
@@ -2870,17 +2883,17 @@ interface MessageIndicatorProps {
   contrast?: boolean
   status?: MessageStatus
   isMessageSeen: boolean
-  ref: dom.Ref<MessageIndicatorView>
+  ref: dom.Ref<MessageIndicator>
 }
 
-function createMessageIndicatorView(props: MessageIndicatorProps) {
+function MessageIndicator(props: MessageIndicatorProps): MessageIndicator {
   const timeElRef = Ref<HTMLDivElement>()
   const el = h("div", { className: `message-indicator ${props.sticky ? "sticky" : ""} ${props.contrast ? "contrast" : ""}` },
     h("span", { ref: timeElRef, className: "message-indicator-time" }, props.time || ""),
-    icons.createClockIcon({ size: 14, class: "message-indicator-icon message-indicator-clock-icon" }),
-    icons.createCheckIcon({ size: 14, class: "message-indicator-icon message-indicator-check-icon" }),
-    icons.createCheckIcon({ size: 14, class: "message-indicator-icon message-indicator-fail-icon" }), // todo: fix wrong icon for failed status
-    icons.createCheckAllIcon({ size: 14, class: "message-indicator-icon message-indicator-check-all-icon" })
+    ClockIcon({ size: 14, class: "message-indicator-icon message-indicator-clock-icon" }),
+    CheckIcon({ size: 14, class: "message-indicator-icon message-indicator-check-icon" }),
+    CheckIcon({ size: 14, class: "message-indicator-icon message-indicator-fail-icon" }), // todo: fix wrong icon for failed status
+    CheckAllIcon({ size: 14, class: "message-indicator-icon message-indicator-check-all-icon" })
   )
 
   el.dataset.status = stringifyMessageStatus(props.status)
@@ -2945,7 +2958,7 @@ function createCustomerDetailsView(props: DetailsViewProps): CustomerDetailsView
     h("div", { className: "details-body" },
       h("div", { className: "d-flex p-2 px-3 border-bottom" },
         h("div", { className: "details-avatar" },
-          createAvatarView({
+          AvatarView({
             ref: avatarViewRef,
             id: props.chatId,
             size: 48,
@@ -3147,13 +3160,13 @@ function createCustomerDetailsView(props: DetailsViewProps): CustomerDetailsView
   }
 }
 
-interface AvatarView {
+export interface AvatarView {
   el: HTMLDivElement
   dispose(): void
   update(props: AvatarViewProps): void
 }
 
-interface AvatarViewProps {
+export interface AvatarViewProps {
   id: string
   size: number,
   alt: string,
@@ -3161,7 +3174,7 @@ interface AvatarViewProps {
   badge?: "accepting_chats" | "not_accepting_chats" | "offline"
 }
 
-function createAvatarView(props: AvatarViewProps & {
+export function AvatarView(props: AvatarViewProps & {
   ref?: dom.Ref<AvatarView>
 }): AvatarView {
   const imageElRef = Ref<HTMLDivElement>()
@@ -3390,7 +3403,7 @@ function createFileUploadModal(props: FileUploadModalProps) {
     h("div", { className: "modal-content modal-small modal-center p-4", ref: modalContentRef, onclick: onModalContentClick },
       h("div", { className: "mb-2" }, "Send Files"),
       h("button", { className: "modal-close", onclick: onCloseButtonClick },
-        icons.createCloseIcon({ size: 24 })
+        CloseIcon({ size: 24 })
       ),
       h("div", { className: "mb-2", ref: modalBodyRef }),
       h("div", { className: "text-right" },
@@ -3493,7 +3506,7 @@ interface ProgressButtonNextProps {
 export function createProgressButton(props: ProgressButtonProps) {
   const circleRef = Ref<SVGCircleElement>()
   const el = h("button", { className: "progress-button", onclick: props.onClick },
-    icons.createLoaderIcons({
+    LoaderIcons({
       circleRef,
       size: props.size
     })
@@ -3521,211 +3534,172 @@ export function createProgressButton(props: ProgressButtonProps) {
   }
 
   function updateCircle(progress: number) {
-    const dasharray = 2 * Math.PI * icons.LOADER_ICONS_R;
+    const dasharray = 2 * Math.PI * LOADER_ICONS_R;
     const dashoffset = Math.min(dasharray, Math.max(0, dasharray - dasharray * progress))
 
     circleRef.current.setAttribute("stroke-dashoffset", String(dashoffset))
   }
 }
 
-namespace icons {
-  interface Props {
-    class?: string
-    size?: number
-    ref?: dom.Ref<SVGSVGElement>
-  }
+interface IconProps {
+  class?: string
+  size?: number
+  ref?: dom.Ref<SVGSVGElement>
+}
 
-  export function createMenuIcon(props?: Props) {
-    return hNS("svg", {
-      class: props?.class ?? "",
+function CloseIcon(props?: IconProps) {
+  return svg("svg", {
+    class: props?.class ?? "",
+    fill: "currentColor",
+    width: props?.size || 48,
+    height: props?.size || 48,
+    viewBox: "0 96 960 960",
+    ref: props?.ref
+  },
+    svg("path", {
+      d: "m249 849-42-42 231-231-231-231 42-42 231 231 231-231 42 42-231 231 231 231-42 42-231-231-231 231Z"
+    })
+  )
+}
+
+function ArrowBackIcon(props?: IconProps) {
+  return svg("svg", {
+    class: props?.class ?? "",
+    fill: "currentColor",
+    width: props?.size || 48,
+    height: props?.size || 48,
+    viewBox: "0 96 960 960",
+    ref: props?.ref
+  },
+    svg("path", {
+      d: "M480 896 160 576l320-320 42 42-248 248h526v60H274l248 248-42 42Z"
+    })
+  )
+}
+
+function ClockIcon(props?: IconProps) {
+  return svg("svg", {
+    class: props?.class ?? "",
+    fill: "currentColor",
+    width: props?.size || 48,
+    height: props?.size || 48,
+    viewBox: "0 0 16 16",
+    ref: props?.ref
+  },
+    svg("path", {
+      "fill-rule": "evenodd",
+      d: "M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm8-7A8 8 0 1 1 0 8a8 8 0 0 1 16 0z"
+    }),
+    svg("path", {
+      "fill-rule": "evenodd",
+      d: "M7.5 3a.5.5 0 0 1 .5.5v5.21l3.248 1.856a.5.5 0 0 1-.496.868l-3.5-2A.5.5 0 0 1 7 9V3.5a.5.5 0 0 1 .5-.5z"
+    })
+  )
+}
+
+function CheckIcon(props?: IconProps) {
+  return svg("svg", {
+    class: props?.class ?? "",
+    fill: "currentColor",
+    width: props?.size || 48,
+    height: props?.size || 48,
+    viewBox: "0 0 16 16",
+    ref: props?.ref
+  },
+    svg("path", {
+      "fill-rule": "evenodd",
+      d: "M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"
+    })
+  )
+}
+
+function CheckAllIcon(props?: IconProps) {
+  return svg("svg", {
+    class: props?.class ?? "",
+    fill: "currentColor",
+    width: props?.size || 48,
+    height: props?.size || 48,
+    viewBox: "0 0 16 16",
+    ref: props?.ref
+  },
+    svg("path", {
+      "fill-rule": "evenodd",
+      d: "M12.354 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"
+    }),
+    svg("path", {
+      "fill-rule": "evenodd",
+      d: "M6.25 8.043l-.896-.897a.5.5 0 1 0-.708.708l.897.896.707-.707zm1 2.414l.896.897a.5.5 0 0 0 .708 0l7-7a.5.5 0 0 0-.708-.708L8.5 10.293l-.543-.543-.707.707z"
+    })
+  )
+}
+
+function AttachIcon(props?: IconProps) {
+  return svg("svg", {
+    class: props?.class ?? "",
+    fill: "currentColor",
+    width: props?.size || 24,
+    height: props?.size || 24,
+    viewBox: "0 0 512 512",
+    ref: props?.ref
+  },
+    svg("path", {
+      "fill-rule": "evenodd",
+      fill: "none",
+      stroke: "currentColor",
+      "stroke-linecap": "round",
+      "stroke-miterlimit": "10",
+      "stroke-width": "32",
+      d: "M216.08 192v143.85a40.08 40.08 0 0080.15 0l.13-188.55a67.94 67.94 0 10-135.87 0v189.82a95.51 95.51 0 10191 0V159.74"
+    }),
+  )
+}
+
+function LoaderIcons(props?: IconProps & {
+  circleRef?: dom.Ref<SVGCircleElement>
+}) {
+  return svg("svg", {
+    class: props?.class ?? "",
+    fill: "currentColor",
+    width: props?.size || 24,
+    height: props?.size || 24,
+    viewBox: "0 0 24 24",
+    ref: props?.ref
+  },
+    svg("path", {
       fill: "currentColor",
-      width: props?.size || 48,
-      height: props?.size || 48,
-      viewBox: "0 96 960 960",
-      ref: props?.ref
-    },
-      hNS("path", {
-        d: "M120 816v-60h720v60H120Zm0-210v-60h720v60H120Zm0-210v-60h720v60H120Z"
-      })
-    )
-  }
+      stroke: "none",
+      d: "M8.43078 16.2154L12 12.6462L15.5692 16.2154L16.2154 15.5692L12.6462 12L16.2154 8.43078L15.5692 7.7846L12 11.3538L8.43078 7.7846L7.7846 8.43078L11.3538 12L7.7846 15.5692L8.43078 16.2154Z"
+    }),
+    svg("circle", {
+      ref: props?.circleRef,
+      cx: "12",
+      cy: "12",
+      r: `${LOADER_ICONS_R}`,
+      stroke: "currentColor",
+      "stroke-dasharray": "53.40707511102649",
+      "stroke-dashoffset": "50.40707511102649",
+      transform: "rotate(-90, 12, 12)",
+      fill: "none",
+    })
+  )
+}
 
-  export function createCloseIcon(props?: Props) {
-    return hNS("svg", {
-      class: props?.class ?? "",
+function FileEarmarkIcon(props?: IconProps) {
+  return svg("svg", {
+    class: props?.class ?? "",
+    fill: "currentColor",
+    width: props?.size || 24,
+    height: props?.size || 24,
+    viewBox: "0 0 16 16",
+    ref: props?.ref
+  },
+    svg("path", {
       fill: "currentColor",
-      width: props?.size || 48,
-      height: props?.size || 48,
-      viewBox: "0 96 960 960",
-      ref: props?.ref
-    },
-      hNS("path", {
-        d: "m249 849-42-42 231-231-231-231 42-42 231 231 231-231 42 42-231 231 231 231-42 42-231-231-231 231Z"
-      })
-    )
-  }
-
-  export function createArrowBackIcon(props?: Props) {
-    return hNS("svg", {
-      class: props?.class ?? "",
+      d: "M4 0h5.5v1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h1V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2z"
+    }),
+    svg("path", {
       fill: "currentColor",
-      width: props?.size || 48,
-      height: props?.size || 48,
-      viewBox: "0 96 960 960",
-      ref: props?.ref
-    },
-      hNS("path", {
-        d: "M480 896 160 576l320-320 42 42-248 248h526v60H274l248 248-42 42Z"
-      })
-    )
-  }
-
-  export function createClockIcon(props?: Props) {
-    return hNS("svg", {
-      class: props?.class ?? "",
-      fill: "currentColor",
-      width: props?.size || 48,
-      height: props?.size || 48,
-      viewBox: "0 0 16 16",
-      ref: props?.ref
-    },
-      hNS("path", {
-        "fill-rule": "evenodd",
-        d: "M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm8-7A8 8 0 1 1 0 8a8 8 0 0 1 16 0z"
-      }),
-      hNS("path", {
-        "fill-rule": "evenodd",
-        d: "M7.5 3a.5.5 0 0 1 .5.5v5.21l3.248 1.856a.5.5 0 0 1-.496.868l-3.5-2A.5.5 0 0 1 7 9V3.5a.5.5 0 0 1 .5-.5z"
-      })
-    )
-  }
-
-  export function createCheckIcon(props?: Props) {
-    return hNS("svg", {
-      class: props?.class ?? "",
-      fill: "currentColor",
-      width: props?.size || 48,
-      height: props?.size || 48,
-      viewBox: "0 0 16 16",
-      ref: props?.ref
-    },
-      hNS("path", {
-        "fill-rule": "evenodd",
-        d: "M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"
-      })
-    )
-  }
-
-  export function createCheckAllIcon(props?: Props) {
-    return hNS("svg", {
-      class: props?.class ?? "",
-      fill: "currentColor",
-      width: props?.size || 48,
-      height: props?.size || 48,
-      viewBox: "0 0 16 16",
-      ref: props?.ref
-    },
-      hNS("path", {
-        "fill-rule": "evenodd",
-        d: "M12.354 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"
-      }),
-      hNS("path", {
-        "fill-rule": "evenodd",
-        d: "M6.25 8.043l-.896-.897a.5.5 0 1 0-.708.708l.897.896.707-.707zm1 2.414l.896.897a.5.5 0 0 0 .708 0l7-7a.5.5 0 0 0-.708-.708L8.5 10.293l-.543-.543-.707.707z"
-      })
-    )
-  }
-
-  export function createPinIcon(props?: Props) {
-    return hNS("svg", {
-      class: props?.class ?? "",
-      fill: "currentColor",
-      width: props?.size || 48,
-      height: props?.size || 48,
-      viewBox: "0 0 16 16",
-      ref: props?.ref
-    },
-      hNS("path", {
-        "fill-rule": "evenodd",
-        d: "M12.166 8.94C12.696 7.867 13 6.862 13 6A5 5 0 0 0 3 6c0 .862.305 1.867.834 2.94.524 1.062 1.234 2.12 1.96 3.07A31.481 31.481 0 0 0 8 14.58l.208-.22a31.493 31.493 0 0 0 1.998-2.35c.726-.95 1.436-2.008 1.96-3.07zM8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10z"
-      }),
-      hNS("path", {
-        "fill-rule": "evenodd",
-        d: "M8 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 1a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"
-      })
-    )
-  }
-
-  export function createAttachIcon(props?: Props) {
-    return hNS("svg", {
-      class: props?.class ?? "",
-      fill: "currentColor",
-      width: props?.size || 24,
-      height: props?.size || 24,
-      viewBox: "0 0 512 512",
-      ref: props?.ref
-    },
-      hNS("path", {
-        "fill-rule": "evenodd",
-        fill: "none",
-        stroke: "currentColor",
-        "stroke-linecap": "round",
-        "stroke-miterlimit": "10",
-        "stroke-width": "32",
-        d: "M216.08 192v143.85a40.08 40.08 0 0080.15 0l.13-188.55a67.94 67.94 0 10-135.87 0v189.82a95.51 95.51 0 10191 0V159.74"
-      }),
-    )
-  }
-
-  export const LOADER_ICONS_R = 8.5
-
-  export function createLoaderIcons(props?: Props & {
-    circleRef?: dom.Ref<SVGCircleElement>
-  }) {
-    return hNS("svg", {
-      class: props?.class ?? "",
-      fill: "currentColor",
-      width: props?.size || 24,
-      height: props?.size || 24,
-      viewBox: "0 0 24 24",
-      ref: props?.ref
-    },
-      hNS("path", {
-        fill: "currentColor",
-        stroke: "none",
-        d: "M8.43078 16.2154L12 12.6462L15.5692 16.2154L16.2154 15.5692L12.6462 12L16.2154 8.43078L15.5692 7.7846L12 11.3538L8.43078 7.7846L7.7846 8.43078L11.3538 12L7.7846 15.5692L8.43078 16.2154Z"
-      }),
-      hNS("circle", {
-        ref: props?.circleRef,
-        cx: "12",
-        cy: "12",
-        r: `${LOADER_ICONS_R}`,
-        stroke: "currentColor",
-        "stroke-dasharray": "53.40707511102649",
-        "stroke-dashoffset": "50.40707511102649",
-        transform: "rotate(-90, 12, 12)",
-        fill: "none",
-      })
-    )
-  }
-
-  export function createFileEarmarkIcon(props?: Props) {
-    return hNS("svg", {
-      class: props?.class ?? "",
-      fill: "currentColor",
-      width: props?.size || 24,
-      height: props?.size || 24,
-      viewBox: "0 0 16 16",
-      ref: props?.ref
-    },
-      hNS("path", {
-        fill: "currentColor",
-        d: "M4 0h5.5v1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h1V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2z"
-      }),
-      hNS("path", {
-        fill: "currentColor",
-        d: "M9.5 3V0L14 4.5h-3A1.5 1.5 0 0 1 9.5 3z"
-      })
-    )
-  }
+      d: "M9.5 3V0L14 4.5h-3A1.5 1.5 0 0 1 9.5 3z"
+    })
+  )
 }

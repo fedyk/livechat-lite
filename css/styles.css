@@ -93,6 +93,11 @@ input:focus {
   outline: none;
 }
 
+a {
+  color: var(--tint-color);
+  text-decoration: none;
+}
+
 .text-primary {
   color: var(--main-text-color);
 }

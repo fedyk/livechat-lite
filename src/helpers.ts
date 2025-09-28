@@ -1545,3 +1545,43 @@ export function getColorModeName(colorMode: ColorMode) {
     default: return colorMode
   }
 }
+
+export function linkify(text: string) {
+  if (typeof text !== "string") {
+    return ""
+  }
+
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/(?:(?:https?:\/\/)|(?:www\.))[\p{L}\p{N}.-]+\.[\p{L}]{2,}(?:[^\s<]*)/giu, function(raw) {    
+    let url = raw;
+    let trailing = "";
+
+    while (/[),.!?:;]$/.test(url)) {
+      trailing = url.slice(-1) + trailing;
+      url = url.slice(0, -1);
+    }
+
+    const href = url.startsWith("www.") ? `https://${url}` : url;
+    const allowed = /^(https?:)\/\//i.test(href);
+
+    if (!allowed) {
+      return raw;
+    }
+
+    try {
+      new URL(href);
+    } catch {
+      return raw + trailing;
+    }
+
+    const safeAttrs = 'target="_blank" rel="noopener noreferrer nofollow ugc"';
+    const display = url
+
+    return `<a href="${href}" ${safeAttrs}>${display}</a>${trailing}`;
+  })
+}
