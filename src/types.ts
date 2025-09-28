@@ -97,3 +97,10 @@ export interface FileUploadModal {
   chatId: string
   files: File[]
 }
+
+export interface CannedResponse {
+  id: number
+  group: number
+  tags: string[]
+  text: string
+}

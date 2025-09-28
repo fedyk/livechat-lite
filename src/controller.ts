@@ -14,7 +14,6 @@ import {
 import { Store } from "./store.js"
 import type * as types from "./types.js"
 import * as helpers from "./helpers.js"
-import { rest } from "./rest-api.js"
 import { accounts, v35 } from "./livechat-api.js"
 import { createRef } from "./dom.js"
 import { mergeChats } from "./helpers.js"
@@ -516,7 +515,7 @@ export function createController(options: ControllerOptions) {
 
     if (payload.type === "lc2" && payload.content.name === "canned_response_add") {
       const groupId = payload.content.group
-      const cannedResponse = rest.parseCannedResponse(payload.content.canned_response)
+      const cannedResponse = payload.content.canned_response as types.CannedResponse
 
       store.dispatch(function (state) {
         const cannedResponses = Object.assign({}, state.cannedResponses)
@@ -535,7 +534,7 @@ export function createController(options: ControllerOptions) {
 
     if (payload.type === "lc2" && payload.content.name === "canned_response_update") {
       const groupId = payload.content.group
-      const cannedResponse = rest.parseCannedResponse(payload.content.canned_response)
+      const cannedResponse = payload.content.canned_response as types.CannedResponse
 
       store.dispatch(function (state) {
         const cannedResponses = Object.assign({}, state.cannedResponses)
@@ -1653,7 +1652,7 @@ export function createController(options: ControllerOptions) {
   async function syncCannedResponses(groupId: number, signal?: AbortSignal) {
     const accessToken = await getAccessToken()
 
-    return rest.getCannedResponse(accessToken, groupId, signal).then(function (cannedResponses) {
+    return api.getCannedResponse(accessToken, groupId, signal).then(function (cannedResponses) {
       store.dispatch(function (state) {
         return {
           cannedResponses: Object.assign({}, state.cannedResponses, {

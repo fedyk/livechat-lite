@@ -1,4 +1,4 @@
-import { Credentials } from "./types.js"
+import { Credentials, CannedResponse } from "./types.js"
 import { ErrorWithType } from "./helpers.js"
 
 const host = "www.livechat-apps.com"
@@ -7,7 +7,6 @@ export namespace api {
   export function parseUserAgent(body: {
     user_agent: string
   }, signal?: AbortSignal) {
-
     return fetch(`https://${host}/lite/parse-user-agent`, {
       method: "POST",
       body: JSON.stringify(body),
@@ -54,6 +53,19 @@ export namespace api {
       })
   }
 
+  export function getCannedResponse(accessToken: string, groupId: number, signal?: AbortSignal) {
+    return fetch(`https://${host}/lite/rest/canned_responses?group=${encodeURIComponent(groupId)}`, {
+      method: "GET",
+      headers: {
+        "authorization": `Bearer ${accessToken}`,
+        "content-type": "application/json",
+        "x-api-version": "2",
+        "x-region": getRegion(accessToken),
+      },
+      signal: signal
+    }).then(parseResponse<CannedResponse[]>)
+  }
+
   function getRequestHeaders(accessToken?: string) {
     const headers: Record<string, string> = {
       "content-type": "text/plain",
@@ -65,26 +77,30 @@ export namespace api {
 
     return headers
   }
+}
 
-  function parseResponse<T>(response: Response) {
-    return response.text().then(function (text) {
-      let json;
+function parseResponse<T>(response: Response) {
+  return response.text().then(function (text) {
+    let json;
 
-      try {
-        json = JSON.parse(text)
-      }
-      catch (err) {
-        throw new ErrorWithType("Fail to parse JSON response: " + text, "internal_error", response.status)
-      }
+    try {
+      json = JSON.parse(text)
+    }
+    catch (err) {
+      throw new ErrorWithType("Fail to parse JSON response: " + text, "internal_error", response.status)
+    }
 
-      if (response.ok) {
-        return json as T
-      }
+    if (response.ok) {
+      return json as T
+    }
 
-      const message = String(json.message ?? "Unknown error")
-      const type = String(json.type ?? "unknown_error")
+    const message = String(json.message ?? "Unknown error")
+    const type = String(json.type ?? "unknown_error")
 
-      throw new ErrorWithType(message, type, response.status)
-    })
-  }
+    throw new ErrorWithType(message, type, response.status)
+  })
+}
+
+function getRegion(accessToken: string) {
+  return accessToken?.split(":")[0] || "dal"
 }

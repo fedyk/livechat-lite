@@ -15,10 +15,9 @@ import {
   createAutoResize
 } from "./services.js"
 import { $Store, State } from "./store.js"
-import { rest } from "./rest-api.js"
 import { v35 } from "./livechat-api.js"
 import { $CommandsController, createCommandsView } from "./commands.js"
-import type { Unsubscriber } from "./types.js"
+import type { CannedResponse, Unsubscriber } from "./types.js"
 import { BaseContext, ElementWithContext, list2 } from "./list.js"
 import type {
   ArchivedChatsStatus,
@@ -1725,7 +1724,7 @@ function createComposerView(props: {
   let autoResize: AutoResize | null = null
   let autocompleteKey = ""
   let autocompleteQuery = ""
-  let cannedResponses: Record<number, rest.CannedResponse[]>
+  let cannedResponses: Record<number, CannedResponse[]>
 
   const el = h("div", {
     className: helpers.cx("composer", {
