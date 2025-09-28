@@ -1,6 +1,5 @@
 import { createInjector, getActiveThread, mapBy, mergeChat, mergeChats, mergeThreads, shallowEqual, updateThread } from "./helpers.js"
 import type * as t from "./types.js"
-import type { rest } from "./rest-api.js"
 import type { v35 } from "./livechat-api.js"
 import { ProgressSignal } from "./services.js"
 import { Unsubscriber } from "./types.js"
@@ -39,7 +38,7 @@ export interface State {
   selectedChatId: string | null
   myProfile: v35.agent.MyProfile | null
   license: v35.agent.License | null
-  cannedResponses: Record<number, rest.CannedResponse[]>
+  cannedResponses: Record<number, t.CannedResponse[]>
 
   selectedChatFolder: t.ChatFolder
 
