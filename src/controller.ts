@@ -143,8 +143,6 @@ export function createController(options: ControllerOptions) {
 
     store.dispatch({ networkStatus: "connecting" })
 
-    debugger
-
     const rtm = await v35.agent.createRTM(organization_id)
     const initState = await rtm.login({
       token: `Bearer ${accessToken}`,
