@@ -143,7 +143,10 @@ export function createController(options: ControllerOptions) {
 
     store.dispatch({ networkStatus: "connecting" })
 
-    const resp = await v35.agent.createRTM(organization_id, {
+    debugger
+
+    const rtm = await v35.agent.createRTM(organization_id)
+    const initState = await rtm.login({
       token: `Bearer ${accessToken}`,
       timezone,
       customer_monitoring_level: "my",
@@ -158,7 +161,7 @@ export function createController(options: ControllerOptions) {
 
     const chatIds = helpers.unique(
       Object.keys(state.chats),
-      resp.initState.chats_summary.map(c => c.id)
+      initState.chats_summary.map(c => c.id)
     )
 
     const transitions = startChatTransitions(chatIds)
@@ -168,9 +171,9 @@ export function createController(options: ControllerOptions) {
     })
 
     store.setInitialState(
-      resp.initState.chats_summary,
-      resp.initState.license,
-      resp.initState.my_profile
+      initState.chats_summary,
+      initState.license,
+      initState.my_profile
     )
 
     transitions.commit()
@@ -189,18 +192,18 @@ export function createController(options: ControllerOptions) {
 
     store.dispatch({ networkStatus: "online" })
 
-    resp.onPush = onPush
-    resp.onClose = onClose
+    rtm.onPush = onPush
+    rtm.onClose = onClose
     reconnectAttempts = 0
 
-    return resp
+    return rtm
 
     function onClose() {
       chatRouter.reset()
       store.dispatch({ networkStatus: "offline" })
 
-      resp.onClose = null!
-      resp.onPush = null!
+      rtm.onClose = null!
+      rtm.onPush = null!
 
       if (autoReconnect) {
         scheduleReconnect()

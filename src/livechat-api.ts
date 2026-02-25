@@ -1448,7 +1448,7 @@ export namespace v35 {
       error: ErrorWithType
     }
 
-    export async function createRTM(organization_id: string, options: Login["request"]) {
+    export async function createRTM(organization_id: string) {
       const url = `wss://api.livechatinc.com/v3.5/agent/rtm/ws?organization_id=${organization_id}`
       const ws = await openWebSocket(url)
       const requests = new Map<string, RTMRequest>()
@@ -1462,9 +1462,10 @@ export namespace v35 {
       ws.onerror = onError
       ws.onmessage = onMessage
 
-      const initState = await login(options)
-      let self = {
-        initState,
+      const self = {   
+        login(options: Login["request"]) {
+          return login(options)
+        },    
         setRoutingStatus,
         listChats,
         close,
