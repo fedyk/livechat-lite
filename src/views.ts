@@ -3192,6 +3192,9 @@ export function AvatarView(props: AvatarViewProps & {
     h("div", { className: "avatar-badge", ref: badgeElRef })
   )
 
+  let hasValidImage = false
+  let hasImageError = false
+  imgElRef.current.onload = onImgLoad
   imgElRef.current.onerror = onImgError
 
   update(props)
@@ -3209,7 +3212,8 @@ export function AvatarView(props: AvatarViewProps & {
   return avatarView
 
   function dispose() {
-    imageElRef.current.onerror = null
+    imgElRef.current.onload = null
+    imgElRef.current.onerror = null
     imageElRef.current = null!
     initialsElRef.current = null!
     badgeElRef.current = null!
@@ -3228,12 +3232,29 @@ export function AvatarView(props: AvatarViewProps & {
 
     imgElRef.current.alt = props.alt
 
-    if (imgElRef.current.src !== props.src) {
-      imgElRef.current.src = props.src || ""
-
+    const nextSrc = props.src || ""
+    const currentSrc = imgElRef.current.getAttribute("src") || ""
+    if (currentSrc !== nextSrc) {
+      hasValidImage = false
+      hasImageError = false
+      imgElRef.current.src = nextSrc
       if (imageElRef.current) {
-        imageElRef.current.classList.toggle("hidden", !props.src)
+        imageElRef.current.classList.toggle("hidden", !nextSrc)
       }
+    }
+
+    if (!nextSrc) {
+      setInitialsHidden(false)
+    } else if (hasValidImage) {
+      setInitialsHidden(true)
+    } else {
+      setInitialsHidden(false)
+    }
+
+    syncImageState(nextSrc)
+
+    if (hasImageError && imageElRef.current) {
+      imageElRef.current.classList.add("hidden")
     }
 
     // @todo: append / remove img based on src
@@ -3247,9 +3268,43 @@ export function AvatarView(props: AvatarViewProps & {
   }
 
   function onImgError() {
+    hasValidImage = false
+    hasImageError = true
     if (imageElRef.current) {
       imageElRef.current.classList.add("hidden")
     }
+    setInitialsHidden(false)
+  }
+
+  function onImgLoad() {
+    hasValidImage = true
+    hasImageError = false
+    
+    if (imageElRef.current) {
+      imageElRef.current.classList.remove("hidden")
+    }
+
+    setInitialsHidden(true)
+  }
+
+  function syncImageState(src: string) {
+    if (!src) {
+      hasValidImage = false
+      return
+    }
+
+    if (imgElRef.current.complete && imgElRef.current.naturalWidth > 0) {
+      hasValidImage = true
+      setInitialsHidden(true)
+    }
+  }
+
+  function setInitialsHidden(hidden: boolean) {
+    if (!initialsElRef.current) {
+      return
+    }
+
+    initialsElRef.current.classList.toggle("hidden", hidden)
   }
 
   function randomColor(id: string) {
