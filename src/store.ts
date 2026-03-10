@@ -102,7 +102,7 @@ export function createStore(initialState: Pick<State, "credentials" | "searchRec
     myProfile: null,
     myChatIds: [],
     selectedChatId: null,
-    selectedChatFolder: "my",
+    selectedChatFolder: "all",
     supervisedChatIds: [],
     queuedChatIds: [],
     unassignedChatIds: [],
