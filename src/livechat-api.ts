@@ -410,69 +410,59 @@ export namespace v35 {
     /**
      * RTM
      */
-    export type Methods = Ping
-      | Login
-      | SetRoutingStatus
-      | ListChats
-
-    export interface Ping {
-      method: "ping"
-      request: {}
-      response: {}
-    }
-
-    export interface Login {
-      method: "login"
-      request: {
-        token: string
-        timezone: string
-        reconnect: boolean
-        application: {
-          name: string
-          version: string
+    export interface Methods {
+      ping: {
+        payload: {}
+        response: {}
+      }
+      login: {
+        payload: {
+          token: string
+          timezone: string
+          reconnect: boolean
+          application: {
+            name: string
+            version: string
+          }
+          customer_monitoring_level?: CustomerPushLevel
+          pushes?: {
+            [K: `${number}.${number}`]: Pushes["action"][]
+          }
         }
-        customer_monitoring_level?: CustomerPushLevel
-        pushes?: {
-          [K: `${number}.${number}`]: Pushes["action"][]
+        response: {
+          license: License
+          my_profile: MyProfile
+          chats_summary: Chat[]
         }
       }
-      response: {
-        license: License
-        my_profile: MyProfile
-        chats_summary: Chat[]
+      set_routing_status: {
+        payload: {
+          status: RoutingStatus
+          agent_id: string
+        }
+        response: {}
       }
-    }
-
-    export interface SetRoutingStatus {
-      method: "set_routing_status"
-      request: {
-        status: RoutingStatus
-        agent_id: string
-      }
-      response: {}
-    }
-
-    export interface ListChats {
-      method: "list_chats"
-      request: {
-        filters?: {
-          include_active?: boolean
-          include_chats_without_threads?: boolean
-          group_ids?: number[]
-          properties?: {
-            routing?: {
-              pinned?: PropertyFilterType
+      list_chats: {
+        payload: {
+          filters?: {
+            include_active?: boolean
+            include_chats_without_threads?: boolean
+            group_ids?: number[]
+            properties?: {
+              routing?: {
+                pinned?: PropertyFilterType
+              }
             }
           }
-        },
-        sort_order?: "asc" | "desc"
-        limit?: number
-        page_id?: string
-      }
-      response: {
-        chats: Chat[]
-        found_chats: number
-        next_page_id: string
+          sort_order?: "asc" | "desc"
+          limit?: number
+          page_id?: string
+        }
+        response: {
+          chats: Chat[]
+          found_chats: number
+          next_page_id: string
+        }
       }
     }
 
@@ -1102,7 +1092,7 @@ export namespace v35 {
       }).then(parseResponse).then(parseRoutingStatuses)
     }
 
-    export function setRoutingStatus(accessToken: string, payload: SetRoutingStatus["request"]) {
+    export function setRoutingStatus(accessToken: string, payload: Methods["set_routing_status"]["payload"]) {
       return fetch("https://api.livechatinc.com/v3.5/agent/action/set_routing_status", {
         headers: getRequestHeaders(accessToken),
         method: "POST",
@@ -1226,7 +1216,7 @@ export namespace v35 {
       })
     }
 
-    export function listChats(accessToken: string, payload: ListChats["request"]) {
+    export function listChats(accessToken: string, payload: Methods["list_chats"]["payload"]) {
       return fetch("https://api.livechatinc.com/v3.5/agent/action/list_chats", {
         headers: getRequestHeaders(accessToken),
         method: "POST",
@@ -1419,10 +1409,6 @@ export namespace v35 {
           progress.progress(event)
         }
 
-        function onDone() {
-
-        }
-
         function cleanup() {
           abort.onabort = null
           xhr.onload = null
@@ -1440,105 +1426,78 @@ export namespace v35 {
     /**
      * RTM
      */
-    export type RTM = Awaited<ReturnType<typeof createRTM>>
+    export class RTM2 {
+      private requests: Map<string, RTMRequest>;
+      private counter: number
+      private pingTimer: number
+      private pongTimer: number
+      private webSocket: WebSocket
 
-    export interface RTMRequest {
-      resolve(value: unknown): void
-      reject(error: Error): void
-      error: ErrorWithType
-    }
-
-    export async function createRTM(organization_id: string) {
-      const url = `wss://api.livechatinc.com/v3.5/agent/rtm/ws?organization_id=${organization_id}`
-      const ws = await openWebSocket(url)
-      const requests = new Map<string, RTMRequest>()
-      const pingTimeout = 10000
-      const pongTimeout = 5000
-      let pingTimer: number
-      let pongTimer: number
-      let counter = 0
-
-      ws.onclose = onClose
-      ws.onerror = onError
-      ws.onmessage = onMessage
-
-      const self = {   
-        login(options: Login["request"]) {
-          return login(options)
-        },    
-        setRoutingStatus,
-        listChats,
-        close,
-        onClose() { },
-        onPush(push: Pushes): void { }
+      constructor(url: string) {
+        this.requests = new Map()
+        this.pingTimer = 0
+        this.pongTimer = 0
+        this.counter = 0
+        this.webSocket = new WebSocket(url)
+        this.webSocket.onopen = this.onWebSocketOpen.bind(this)
+        this.webSocket.onclose = this.onWebSocketClose.bind(this)
+        this.webSocket.onerror = this.onWebSocketError.bind(this)
+        this.webSocket.onmessage = this.onWebSocketMessage.bind(this)
       }
 
-      pingTimer = window.setTimeout(ping, pingTimeout)
+      onopen() { }
+      onclose() { }
+      onerror() { }
+      onpush(_: v35.agent.Pushes) { }
 
-      return self
-
-      function close(code?: number) {
-        ws.close(code)
+      close(code?: number, reason?: string) {
+        this.webSocket.close(code, reason)
       }
 
-      function login(payload: Login["request"]) {
-        return perform<Login>("login", payload).then(function (resp) {
-          return {
-            license: parseLicense(resp.license),
-            my_profile: parseMyProfile(resp.my_profile),
-            chats_summary: parseChatsSummary(resp.chats_summary),
-          }
-        })
-      }
-
-      function setRoutingStatus(payload: SetRoutingStatus["request"]) {
-        return perform<SetRoutingStatus>("set_routing_status", payload)
-      }
-
-      function listChats(payload: ListChats["request"]) {
-        return perform<ListChats>("list_chats", payload).then(parseListChats)
-      }
-
-      function perform<T extends Methods>(action: T["method"], payload?: T["request"]): Promise<T["response"]> {
-        const requestId = String(++counter)
+      async perform<T extends keyof Methods>(
+        action: T,
+        payload?: Methods[T]["payload"]
+      ): Promise<Methods[T]["response"]> {
+        const request_id = String(++this.counter)
         const error = new ErrorWithType("Unknown error", "unknown_error", 500)
 
-        return new Promise(function (resolve, reject) {
-          ws.send(JSON.stringify({
-            request_id: requestId,
-            action: action,
-            payload: payload
-          }))
+        return new Promise((resolve, reject) => {
+          const data = JSON.stringify({ request_id, action, payload })
+          const request: RTMRequest = { resolve, reject, error }
 
-          requests.set(requestId, {
-            resolve,
-            reject,
-            error
-          })
+          this.webSocket.send(data)
+          this.requests.set(request_id, request)
         })
       }
 
-      function onClose() {
-        requests.forEach(function (request) {
-          request.error.message = "Request timeout"
-          request.error.type = "request_timeout"
-          request.error.status = 400
-          request.reject(request.error)
+      private onWebSocketOpen() {
+        this.onopen()
+        this.ping()
+      }
+
+      private onWebSocketClose() {
+        this.requests.forEach(function (request) {
+          const error = new ErrorWithType("Request timeout", "request_timeout", 400)
+
+          request.reject(error)
         })
-        requests.clear()
-        clearTimeout(pingTimeout)
-        clearTimeout(pongTimeout)
 
-        if (typeof self.onClose === "function") {
-          self.onClose()
-        }
+        this.requests.clear()
+
+        clearTimeout(this.pingTimer)
+        clearTimeout(this.pongTimer)
+
+        this.onclose()
+        this.onclose = function () { }
+        this.onerror = function () { }
+        this.onpush = function () { }
       }
 
-      function onError(event: globalThis.Event) {
-        console.warn("close rtm connection", event)
+      private onWebSocketError() {
+        this.onerror()
       }
 
-      function onMessage(event: globalThis.MessageEvent) {
+      onWebSocketMessage(event: globalThis.MessageEvent) {
         const data = JSON.parse(event.data)
 
         if (data && data.type === "response") {
@@ -1548,7 +1507,7 @@ export namespace v35 {
             throw new RangeError("Received an unknown request_id: " + requestId)
           }
 
-          const request = requests.get(requestId)
+          const request = this.requests.get(requestId)
 
           if (!request) {
             throw new RangeError("Missed handler for request:" + event.data)
@@ -1558,60 +1517,45 @@ export namespace v35 {
             request.resolve(data.payload || {})
           }
           else {
-            request.error.message = data?.payload?.error?.message || "Failed to parse response"
-            request.error.type = data.payload.error.type ?? "response_parse_error"
-            request.reject(request.error)
-          }
+            const message = data?.payload?.error?.message || "Failed to parse response"
+            const type = data.payload.error.type ?? "response_parse_error"
 
+            request.reject(new ErrorWithType(message, type, 400))
+          }
         }
 
         if (data?.type === "push") {
-          const push = parsePush(data)
-
-          if (push && typeof self.onPush === "function") {
-            self.onPush(push)
-          }
+          this.onpush(data)
         }
       }
 
-      function ping() {
-        perform("ping").then(function () {
-          window.clearTimeout(pongTimer)
-          pingTimer = window.setTimeout(ping, pingTimeout)
-        }, function (err) {
+      private async ping() {
+        try {
+          this.pongTimer = window.setTimeout(() => {
+            this.webSocket.close(4000)
+          }, 2_000)
+
+          await this.perform("ping", {})
+
+          window.clearTimeout(this.pongTimer)
+          
+          this.pingTimer = window.setTimeout(
+            this.ping.bind(this),
+            5_000
+          )
+        }
+        catch (err) {
           console.warn(err)
-          ws.close(4000)
-        })
-
-        pongTimer = window.setTimeout(function () {
-          ws.close(4000)
-        }, pongTimeout)
+          this.webSocket.close(4000)
+        }
       }
     }
 
-    function openWebSocket(url: string) {
-      return new Promise<WebSocket>(function (resolve, reject) {
-        const ws = new WebSocket(url)
-
-        ws.onopen = onOpen
-        ws.onclose = onClose
-
-        function onOpen() {
-          cleanup()
-          resolve(ws)
-        }
-
-        function onClose() {
-          reject(new Error("Connection was closed"))
-        }
-
-        function cleanup() {
-          ws.onopen = null
-          ws.onclose = null
-        }
-      })
+    export interface RTMRequest {
+      resolve(value: unknown): void
+      reject(error: Error): void
+      error: ErrorWithType
     }
-
 
     /**
      * Parsers

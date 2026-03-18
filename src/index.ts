@@ -85,7 +85,9 @@ export function initApp(p: Options) {
       })
     }
 
-    store.dispatch({ credentials })
+    store.dispatch({ 
+      credentials
+    })
 
     const appView = createAppView()
     const target = document.getElementById("app")
@@ -97,6 +99,10 @@ export function initApp(p: Options) {
     target.replaceWith(appView.el)
 
     controller.connect()
+
+    controller.maybeSyncArchivedChats()
+    controller.maybeSyncInactiveChats()
+    controller.maybeSyncPinnedChats()
   }
 
   function onColorSchemaChange(colorScheme: ColorScheme) {

@@ -98,6 +98,10 @@ export class ErrorWithType extends Error {
   }
 }
 
+export function isAuthenticationError(err: unknown) {
+  return err instanceof ErrorWithType && err.type === "authentication"
+}
+
 
 /**
  * Simple injector for services. Can be useful to tests

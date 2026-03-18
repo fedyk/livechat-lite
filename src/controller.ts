@@ -43,7 +43,7 @@ export function createController(options: ControllerOptions) {
   let autoReconnect = true
   let reconnectAttempts = 0
   let reconnectTimerId: number
-  let rtm: v35.agent.RTM
+  let rtm: v35.agent.RTM2 | null = null
 
   document.addEventListener("paste", onPaste)
 
@@ -107,8 +107,6 @@ export function createController(options: ControllerOptions) {
 
   function connect() {
     if (rtm) {
-      rtm.onPush = null!
-      rtm.onClose = null!
       rtm.close()
     }
 
@@ -116,106 +114,94 @@ export function createController(options: ControllerOptions) {
 
     reconnectAttempts++
 
-    return openConnection()
-      .then(function (result) {
-        rtm = result
-      })
-      .catch(function (err) {
-        if (err instanceof ErrorWithType && err.type === "authentication") {
-          return window.location.replace(accounts.getAccountsUrl({
-            response_type: "code",
-            client_id: options.clientId,
-            redirect_uri: options.redirectUrl,
-          }))
-        }
-
-        console.error(err)
-
-        return scheduleReconnect()
-      })
-  }
-
-  async function openConnection() {
-    let state = store.getState()
-    const accessToken = await getAccessToken()
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-    const organization_id = state.credentials?.organization_id ?? ""
-
-    store.dispatch({ networkStatus: "connecting" })
-
-    const rtm = await v35.agent.createRTM(organization_id)
-    const initState = await rtm.login({
-      token: `Bearer ${accessToken}`,
-      timezone,
-      customer_monitoring_level: "my",
-      reconnect: true,
-      application: {
-        name: "LiveChat X",
-        version: "0.0.1"
-      },
-    })
-
-    state = store.getState()
-
-    const chatIds = helpers.unique(
-      Object.keys(state.chats),
-      initState.chats_summary.map(c => c.id)
-    )
-
-    const transitions = startChatTransitions(chatIds)
+    const organization_id = store.getState()?.credentials?.organization_id || ""
 
     store.dispatch({
-      networkStatus: "updating"
+      networkStatus: "connecting"
     })
 
-    store.setInitialState(
-      initState.chats_summary,
-      initState.license,
-      initState.my_profile
-    )
+    rtm = new v35.agent.RTM2(`wss://api.livechatinc.com/v3.5/agent/rtm/ws?organization_id=${organization_id}`)
+    rtm.onopen = onOpen
+    rtm.onpush = onPush
+    rtm.onclose = onClose
+  }
 
-    transitions.commit()
+  function scheduleConnect() {
+    const maxTimeout = 5_000
+    const wait = Math.min(100 * 2 ** reconnectAttempts, maxTimeout)
 
-    const [syncPinnedChatsErr] = await helpers.go(maybeSyncPinnedChats())
+    reconnectTimerId = window.setTimeout(connect, wait)
+  }
 
-    if (syncPinnedChatsErr) {
-      console.error(syncPinnedChatsErr)
+  async function onOpen() {
+    if (!rtm) {
+      return
     }
 
-    const [syncRoutingStatusesErr] = await helpers.go(syncRoutingStatuses())
+    try {
+      const timezone = getTimezone()
+      const token = await getAccessToken()
+      const initState = await rtm.perform("login", {
+        token: `Bearer ${token}`,
+        timezone,
+        customer_monitoring_level: "my",
+        reconnect: true,
+        application: { name: "LiteChat for LiveChat", version: "1.2.3" },
+      })
 
-    if (syncRoutingStatusesErr) {
-      console.error(syncRoutingStatusesErr)
-    }
+      const state = store.getState()
+      const chatIds = helpers.unique(Object.keys(state.chats), initState.chats_summary.map(c => c.id))
+      const transitions = startChatTransitions(chatIds)
 
-    store.dispatch({ networkStatus: "online" })
+      store.dispatch({
+        networkStatus: "updating"
+      })
 
-    rtm.onPush = onPush
-    rtm.onClose = onClose
-    reconnectAttempts = 0
+      store.setInitialState(
+        initState.chats_summary,
+        initState.license,
+        initState.my_profile
+      )
 
-    return rtm
+      transitions.commit()
 
-    function onClose() {
-      chatRouter.reset()
-      store.dispatch({ networkStatus: "offline" })
+      const [pinnedChatsErr] = await helpers.go(maybeSyncPinnedChats())
 
-      rtm.onClose = null!
-      rtm.onPush = null!
-
-      if (autoReconnect) {
-        scheduleReconnect()
+      if (pinnedChatsErr) {
+        console.error(pinnedChatsErr)
       }
+
+      const [routingStatusesErr] = await helpers.go(syncRoutingStatuses())
+
+      if (routingStatusesErr) {
+        console.error(routingStatusesErr)
+      }
+
+      store.dispatch({
+        networkStatus: "online"
+      })
+    }
+    catch (err) {
+      if (helpers.isAuthenticationError(err)) {
+        return authorize()
+      }
+
+      console.error(err)
+
+      scheduleConnect()
     }
   }
 
-  function scheduleReconnect() {
-    const minTimeout = 200
-    const maxTimeout = 5000
-    const timeout = Math.min(Math.pow(2, reconnectAttempts) * 100, maxTimeout);
-    const wait = Math.random() * (timeout - minTimeout) + timeout
+  function onClose() {
+    chatRouter.reset()
 
-    reconnectTimerId = window.setTimeout(connect, wait)
+    store.dispatch({
+      networkStatus: "offline"
+    })
+
+    if (autoReconnect) {
+      scheduleConnect()
+    }
   }
 
   function onPush(push: v35.agent.Pushes) {
@@ -674,7 +660,7 @@ export function createController(options: ControllerOptions) {
       selectedChatFolder
     })
 
-    if (selectedChatFolder === "archived") {
+    if (selectedChatFolder === "archived" || selectedChatFolder === "all") {
       maybeSyncArchivedChats()
     }
   }
@@ -1574,7 +1560,7 @@ export function createController(options: ControllerOptions) {
         include_active: false,
         include_chats_without_threads: false,
       },
-      limit: 25,
+      limit: 50,
     })
       .then(function (resp) {
         store.dispatch(function (state) {
@@ -1913,4 +1899,16 @@ export function createController(options: ControllerOptions) {
       }
     })
   }
+
+  function authorize() {
+    return window.location.replace(accounts.getAccountsUrl({
+      response_type: "code",
+      client_id: options.clientId,
+      redirect_uri: options.redirectUrl,
+    }))
+  }
+}
+
+function getTimezone() {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone
 }
