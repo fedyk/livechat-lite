@@ -1078,7 +1078,7 @@ export namespace v35 {
       }
     }
 
-    export type CustomerPushLevel = "my" | "chatting" | "invited" | "online"
+    export type CustomerPushLevel = "my" | "chatting" | "invited" | "online" | "highest_available"
 
     /**
      * @methods
@@ -1470,6 +1470,16 @@ export namespace v35 {
         })
       }
 
+      login(payload: Methods["login"]["payload"]) {
+        return this.perform("login", payload).then(function (resp) {
+          return {
+            license: parseLicense(resp.license),
+            my_profile: parseMyProfile(resp.my_profile),
+            chats_summary: parseChatsSummary(resp.chats_summary),
+          }
+        })
+      }
+
       private onWebSocketOpen() {
         this.onopen()
         this.ping()
@@ -1513,19 +1523,27 @@ export namespace v35 {
             throw new RangeError("Missed handler for request:" + event.data)
           }
 
+          this.requests.delete(requestId)
+
           if (Boolean(data.success)) {
             request.resolve(data.payload || {})
           }
           else {
             const message = data?.payload?.error?.message || "Failed to parse response"
-            const type = data.payload.error.type ?? "response_parse_error"
+            const type = data?.payload?.error?.type ?? "response_parse_error"
 
             request.reject(new ErrorWithType(message, type, 400))
           }
+
+          return
         }
 
         if (data?.type === "push") {
-          this.onpush(data)
+          const push = parsePush(data)
+
+          if (push) {
+            this.onpush(push)
+          }
         }
       }
 
@@ -1650,7 +1668,7 @@ export namespace v35 {
     }
 
     function parseEventsSeenUpTo(eventsSeenUpTo?: any) {
-      if (typeof eventsSeenUpTo !== "string") {
+      if (eventsSeenUpTo == null || eventsSeenUpTo === "") {
         return new Date(0)
       }
 
@@ -1894,7 +1912,7 @@ export namespace v35 {
       }
 
       if (hasPropertyValue(properties, "translation", "source_lang_code") && p.translation) {
-        p.translation.target_lang_code = getPropertyValue<string>(properties, "translation", "target_message", "")
+        p.translation.source_lang_code = getPropertyValue<string>(properties, "translation", "source_lang_code", "")
       }
 
       if (hasPropertyValue(properties, "translation", "target_lang_code") && p.translation) {
@@ -2876,6 +2894,21 @@ export namespace v35 {
             action: "group_updated",
             type: "push",
             payload: data.payload as any
+          }
+        case "groups_status_updated":
+          return {
+            action: "groups_status_updated",
+            type: "push",
+            payload: {
+              groups: Array.isArray(data?.payload?.groups)
+                ? data.payload.groups.map(function (group: any) {
+                  return {
+                    id: Number(group?.id),
+                    status: parseRoutingStatus(group?.status),
+                  }
+                })
+                : []
+            }
           }
         case "incoming_typing_indicator":
           return {

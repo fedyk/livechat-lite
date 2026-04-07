@@ -141,13 +141,64 @@ export function createController(options: ControllerOptions) {
     try {
       const timezone = getTimezone()
       const token = await getAccessToken()
-      const initState = await rtm.perform("login", {
+      const initState = await rtm.login({
         token: `Bearer ${token}`,
         timezone,
-        customer_monitoring_level: "my",
+        customer_monitoring_level: "highest_available",
         reconnect: true,
-        application: { name: "LiteChat for LiveChat", version: "1.2.3" },
+        pushes: {
+          "3.6": [
+            "agent_approved",
+            "agent_created",
+            "agent_deleted",
+            "agent_suspended",
+            "agent_unsuspended",
+            "agent_updated",
+            "bot_created",
+            "bot_deleted",
+            "bot_updated",
+            "chat_access_updated",
+            "chat_deactivated",
+            "chat_transferred",
+            "customer_left",
+            "customer_page_updated",
+            "customer_updated",
+            "event_properties_deleted",
+            "event_properties_updated",
+            "events_marked_as_seen",
+            "group_created",
+            "group_deleted",
+            "groups_status_updated",
+            "group_updated",
+            "incoming_chat",
+            "incoming_customer",
+            "incoming_customers",
+            "incoming_multicast",
+            "incoming_sneak_peek",
+            "queue_positions_updated",
+            "routing_status_set",
+            "thread_properties_deleted",
+            "thread_properties_updated",
+            "thread_tagged",
+            "thread_untagged",
+            "user_added_to_chat",
+            "user_removed_from_chat",
+            "incoming_event",
+            // "event_deleted",
+            // "thread_summary_set"
+          ]
+        },
+        application: {
+          name: "LiteChat for LiveChat",
+          version: "0.0.1"
+        },
       })
+
+      store.setInitialState(
+        initState.chats_summary,
+        initState.license,
+        initState.my_profile
+      )
 
       const state = store.getState()
       const chatIds = helpers.unique(Object.keys(state.chats), initState.chats_summary.map(c => c.id))
@@ -215,10 +266,8 @@ export function createController(options: ControllerOptions) {
         return onChatDeactivated(push)
 
       // Chat access
-      // case "chat_access_granted":
-      //   return handleChatAccessGranted(push)
-      // case "chat_access_revoked":
-      //   return handleChatAccessRevoked(push)
+      case "chat_access_updated":
+        return onChatAccessUpdated(push)
       case "chat_transferred":
         return onChatTransferred(push)
 
@@ -271,6 +320,8 @@ export function createController(options: ControllerOptions) {
       //   return handle_customer_visit_ended(push)
 
       // Status
+      case "groups_status_updated":
+        return onGroupsStatusUpdated(push)
       case "routing_status_set":
         return onRoutingStatusSet(push)
       // case "agent_disconnected":
@@ -315,6 +366,28 @@ export function createController(options: ControllerOptions) {
     })
 
     t.commit(push.payload.requester_id)
+  }
+
+  function onChatAccessUpdated(push: v35.agent.ChatAccessUpdated) {
+    const transition = startChatTransition(push.payload.id)
+
+    store.dispatch(function (state) {
+      const chats = new Map(state.chats)
+      const chat = chats.get(push.payload.id)
+
+      if (!chat) {
+        return
+      }
+
+      chats.set(push.payload.id, {
+        ...chat,
+        access: push.payload.access
+      })
+
+      return { chats }
+    })
+
+    transition.commit()
   }
 
   function onUserAddedToChat(push: v35.agent.UserAddedToChat) {
@@ -466,6 +539,44 @@ export function createController(options: ControllerOptions) {
       return {
         routingStatuses: new Map(state.routingStatuses).set(push.payload.agent_id, push.payload.status)
       }
+    })
+  }
+
+  function onGroupsStatusUpdated(push: v35.agent.GroupsStatusUpdated) {
+    const statuses = new Map(push.payload.groups.map(function (group) {
+      return [group.id, group.status] as const
+    }))
+
+    if (statuses.size === 0) {
+      return
+    }
+
+    store.dispatch(function (state) {
+      if (state.groups.length === 0) {
+        return
+      }
+
+      let changed = false
+      const groups = state.groups.map(function (group) {
+        const status = statuses.get(group.id)
+
+        if (!status || group.routing_status === status) {
+          return group
+        }
+
+        changed = true
+
+        return {
+          ...group,
+          routing_status: status
+        }
+      })
+
+      if (!changed) {
+        return
+      }
+
+      return { groups }
     })
   }
 
