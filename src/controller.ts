@@ -310,8 +310,12 @@ export function createController(options: ControllerOptions) {
       //   return handle_customer_visit_started(push)
       // case "customer_created":
       //   return handle_customer_created(push)
-      // case "customer_updated":
-      //   return handle_customer_updated(push)
+      case "incoming_customers":
+        return onIncomingCustomers(push)
+      case "incoming_customer":
+        return onIncomingCustomer(push)
+      case "customer_updated":
+        return onCustomerUpdated(push)
       // case "customer_page_updated":
       //   return handle_customer_page_updated(push)
       // case "customer_banned":
@@ -534,6 +538,18 @@ export function createController(options: ControllerOptions) {
     transition.commit()
   }
 
+  function onIncomingCustomers(push: v35.agent.IncomingCustomers) {
+    upsertMonitoredCustomers(push.payload.customers, push.payload.customer_monitoring_level)
+  }
+
+  function onIncomingCustomer(push: v35.agent.IncomingCustomer) {
+    upsertMonitoredCustomers([push.payload])
+  }
+
+  function onCustomerUpdated(push: v35.agent.CustomerUpdated) {
+    upsertMonitoredCustomers([push.payload])
+  }
+
   function onRoutingStatusSet(push: v35.agent.RoutingStatusSet) {
     store.dispatch(function (state) {
       return {
@@ -595,6 +611,141 @@ export function createController(options: ControllerOptions) {
 
       return { chats }
     })
+  }
+
+  function upsertMonitoredCustomers(
+    customersToUpsert: v35.agent.PartialMonitoredCustomer[],
+    customerMonitoringLevel?: v35.agent.CustomerPushLevel
+  ) {
+    if (customersToUpsert.length === 0 && customerMonitoringLevel === undefined) {
+      return
+    }
+
+    store.dispatch(function (state) {
+      let chats = state.chats
+      const monitoredCustomers = new Map(state.monitoredCustomers)
+
+      for (const incomingCustomer of customersToUpsert) {
+        const currentCustomer = monitoredCustomers.get(incomingCustomer.id)
+        const mergedCustomer = mergeMonitoredCustomer(currentCustomer, incomingCustomer)
+
+        monitoredCustomers.set(mergedCustomer.id, mergedCustomer)
+        chats = mergeMonitoredCustomerIntoChats(chats, mergedCustomer)
+      }
+
+      const nextState: {
+        monitoredCustomers: Map<string, v35.agent.PartialMonitoredCustomer>
+        customerMonitoringLevel?: v35.agent.CustomerPushLevel
+        chats?: Map<string, v35.agent.Chat>
+      } = {
+        monitoredCustomers
+      }
+
+      if (customerMonitoringLevel !== undefined) {
+        nextState.customerMonitoringLevel = customerMonitoringLevel
+      }
+
+      if (chats !== state.chats) {
+        nextState.chats = chats
+      }
+
+      return nextState
+    })
+  }
+
+  function mergeMonitoredCustomer(
+    currentCustomer: v35.agent.PartialMonitoredCustomer | undefined,
+    incomingCustomer: v35.agent.PartialMonitoredCustomer
+  ): v35.agent.PartialMonitoredCustomer {
+    return {
+      ...currentCustomer,
+      ...incomingCustomer,
+      id: incomingCustomer.id,
+      type: "customer"
+    }
+  }
+
+  function mergeMonitoredCustomerIntoChats(
+    chats: Map<string, v35.agent.Chat>,
+    incomingCustomer: v35.agent.PartialMonitoredCustomer
+  ) {
+    let nextChats: Map<string, v35.agent.Chat> | null = null
+
+    for (const [chatId, chat] of chats) {
+      let updatedChatUsers: v35.agent.User[] | null = null
+
+      for (let i = 0; i < chat.users.length; i++) {
+        const user = chat.users[i]
+
+        if (user.type !== "customer" || user.id !== incomingCustomer.id) {
+          continue
+        }
+
+        const updatedUser = mergeIncomingCustomerIntoUser(user, incomingCustomer)
+
+        if (updatedUser === user) {
+          continue
+        }
+
+        if (!updatedChatUsers) {
+          updatedChatUsers = chat.users.concat()
+        }
+
+        updatedChatUsers[i] = updatedUser
+      }
+
+      if (!updatedChatUsers) {
+        continue
+      }
+
+      if (!nextChats) {
+        nextChats = new Map(chats)
+      }
+
+      nextChats.set(chatId, {
+        ...chat,
+        users: updatedChatUsers
+      })
+    }
+
+    return nextChats ?? chats
+  }
+
+  function mergeIncomingCustomerIntoUser(
+    user: v35.agent.Customer,
+    incomingCustomer: v35.agent.PartialMonitoredCustomer
+  ): v35.agent.Customer {
+    let nextUser = user
+
+    if (incomingCustomer.name !== undefined && incomingCustomer.name !== nextUser.name) {
+      nextUser = { ...nextUser, name: incomingCustomer.name }
+    }
+
+    if (incomingCustomer.email !== undefined && incomingCustomer.email !== nextUser.email) {
+      nextUser = { ...nextUser, email: incomingCustomer.email }
+    }
+
+    if (incomingCustomer.email_verified !== undefined && incomingCustomer.email_verified !== nextUser.email_verified) {
+      nextUser = { ...nextUser, email_verified: incomingCustomer.email_verified }
+    }
+
+    if (incomingCustomer.created_at !== undefined && incomingCustomer.created_at.getTime() !== nextUser.created_at.getTime()) {
+      nextUser = { ...nextUser, created_at: incomingCustomer.created_at }
+    }
+
+    if (incomingCustomer.visit !== undefined && incomingCustomer.visit !== nextUser.last_visit) {
+      nextUser = { ...nextUser, last_visit: incomingCustomer.visit }
+    }
+
+    if (incomingCustomer.statistics !== undefined && incomingCustomer.statistics !== nextUser.statistics) {
+      nextUser = { ...nextUser, statistics: incomingCustomer.statistics }
+    }
+
+    if (incomingCustomer.online !== undefined && incomingCustomer.online !== nextUser.present) {
+      nextUser = { ...nextUser, present: incomingCustomer.online }
+    }
+
+    return nextUser
   }
 
   function handleIncomingSneakPeek(push: v35.agent.IncomingSneakPeek) {

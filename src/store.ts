@@ -47,6 +47,8 @@ export interface State {
   messageStatuses: Map<string, t.MessageStatus>
   filesUpload: Map<string, [ProgressSignal, AbortController]>
   sneakPeeks: Map<string, v35.agent.SneakPeek>
+  monitoredCustomers: Map<string, v35.agent.PartialMonitoredCustomer>
+  customerMonitoringLevel: v35.agent.CustomerPushLevel | null
 
   networkStatus: t.NetworkStatus
 
@@ -127,6 +129,8 @@ export function createStore(initialState: Pick<State, "credentials" | "searchRec
     messageStatuses: new Map(),
     filesUpload: new Map(),
     sneakPeeks: new Map(),
+    monitoredCustomers: new Map(),
+    customerMonitoringLevel: null,
     networkStatus: "offline",
     agents: [],
     groups: [],

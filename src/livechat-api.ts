@@ -62,6 +62,35 @@ export namespace v35 {
       session_fields: SessionField[]
     }
 
+    export interface MonitoredCustomer {
+      id: string
+      type: "customer"
+      name: string
+      email: string
+      name_is_default: boolean
+      created_at: Date
+      visit: CustomerVisit | null
+      statistics: Statistics
+      chats: CustomerChat[]
+      followed: boolean
+      online: boolean
+      group_ids: number[]
+      state: string
+      greeting_id: number | null
+      email_verified: boolean
+    }
+
+    export type PartialMonitoredCustomer = Partial<Omit<MonitoredCustomer, "id" | "type">> & {
+      id: string
+      type: "customer"
+    }
+
+    export interface CustomerChat {
+      chat_id: string
+      thread_id: string
+      last_thread_started_at: Date | null
+    }
+
     export interface Queue {
       position: number
       wait_time: number
@@ -277,12 +306,15 @@ export namespace v35 {
     export type RoutingStatus = "accepting_chats" | "not_accepting_chats" | "offline"
 
     export interface CustomerVisit {
+      id?: number
       started_at: Date
       ip: string
       user_agent: string
       referrer: string
+      browser_language?: string
       geolocation: Geolocation | null
       last_pages: LastPage[]
+      previous_visit_started_at?: Date | null
     }
 
     export interface Geolocation {
@@ -371,6 +403,18 @@ export namespace v35 {
       chats_count: number
       threads_count: number
       visits_count: number
+      page_views_count: number
+      greetings_accepted_count: number
+      greetings_converted_count: number
+      tickets_count: number
+      tickets_inbox_count: number
+      tickets_archive_count: number
+      tickets_spam_count: number
+      tickets_trash_count: number
+      orders_count: number
+      last_activity_at: Date | null
+      last_visit_at: Date | null
+      last_chat_at: Date | null
     }
 
     export interface Postback {
@@ -744,20 +788,20 @@ export namespace v35 {
       type: "push",
       payload: {
         customer_monitoring_level: CustomerPushLevel
-        customers: Customer[]
+        customers: MonitoredCustomer[]
       }
     }
 
     export interface IncomingCustomer {
       action: "incoming_customer"
       type: "push",
-      payload: Customer
+      payload: MonitoredCustomer
     }
 
     export interface CustomerUpdated {
       action: "customer_updated"
       type: "push",
-      payload: Partial<Customer>
+      payload: PartialMonitoredCustomer
     }
 
     export interface CustomerPageUpdated {
@@ -1656,7 +1700,7 @@ export namespace v35 {
             avatar: parseAvatarUrl(user.avatar),
             present: Boolean(user.present),
             events_seen_up_to: parseEventsSeenUpTo(user.events_seen_up_to),
-            last_visit: parseCustomerLastVisit(user.last_visit),
+            last_visit: parseCustomerLastVisit(user.last_visit ?? user.visit),
             statistics: parseStatistics(user.statistics),
             session_fields: parseSessionFields(user.session_fields),
             created_at: parseDate(user.created_at),
@@ -2243,6 +2287,18 @@ export namespace v35 {
         chats_count: Number(statistics?.chats_count ?? 0),
         threads_count: Number(statistics?.threads_count ?? 0),
         visits_count: Number(statistics?.visits_count ?? 0),
+        page_views_count: Number(statistics?.page_views_count ?? 0),
+        greetings_accepted_count: Number(statistics?.greetings_accepted_count ?? 0),
+        greetings_converted_count: Number(statistics?.greetings_converted_count ?? 0),
+        tickets_count: Number(statistics?.tickets_count ?? 0),
+        tickets_inbox_count: Number(statistics?.tickets_inbox_count ?? 0),
+        tickets_archive_count: Number(statistics?.tickets_archive_count ?? 0),
+        tickets_spam_count: Number(statistics?.tickets_spam_count ?? 0),
+        tickets_trash_count: Number(statistics?.tickets_trash_count ?? 0),
+        orders_count: Number(statistics?.orders_count ?? 0),
+        last_activity_at: parseNullableDate(statistics?.last_activity_at),
+        last_visit_at: parseNullableDate(statistics?.last_visit_at),
+        last_chat_at: parseNullableDate(statistics?.last_chat_at),
       }
     }
 
@@ -2272,13 +2328,121 @@ export namespace v35 {
       }
 
       return {
+        id: hasOwnProperty(lastVisit, "id") ? Number(lastVisit.id) : undefined,
         ip: String(lastVisit.ip),
         referrer: String(lastVisit.referrer ?? "").trim(),
         started_at: parseDate(lastVisit.started_at),
         user_agent: String(lastVisit.user_agent ?? ""),
+        browser_language: hasOwnProperty(lastVisit, "browser_language") ? String(lastVisit.browser_language ?? "") : undefined,
         last_pages: lastPages,
         geolocation: parseGeolocation(lastVisit.geolocation),
+        previous_visit_started_at: parseNullableDate(lastVisit.previous_visit_started_at),
       }
+    }
+
+    export function parseCustomerChat(chat?: any): CustomerChat {
+      return {
+        chat_id: String(chat?.chat_id ?? ""),
+        thread_id: String(chat?.thread_id ?? ""),
+        last_thread_started_at: parseNullableDate(chat?.last_thread_started_at),
+      }
+    }
+
+    export function parseCustomerChats(chats: any): CustomerChat[] {
+      if (!Array.isArray(chats)) {
+        return []
+      }
+
+      return chats.map(parseCustomerChat)
+    }
+
+    export function parseMonitoredCustomer(customer: any): MonitoredCustomer {
+      return {
+        id: String(customer?.id ?? ""),
+        type: "customer",
+        name: String(customer?.name ?? "Visitor").trim(),
+        email: String(customer?.email ?? ""),
+        name_is_default: Boolean(customer?.name_is_default),
+        created_at: parseDate(customer?.created_at),
+        visit: parseCustomerLastVisit(customer?.visit),
+        statistics: parseStatistics(customer?.statistics),
+        chats: parseCustomerChats(customer?.chats),
+        followed: Boolean(customer?.followed),
+        online: Boolean(customer?.online),
+        group_ids: parseGroupIds(customer?.group_ids),
+        state: String(customer?.state ?? ""),
+        greeting_id: customer?.greeting_id == null ? null : Number(customer.greeting_id),
+        email_verified: Boolean(customer?.email_verified),
+      }
+    }
+
+    export function parseMonitoredCustomers(customers: any): MonitoredCustomer[] {
+      if (!Array.isArray(customers)) {
+        return []
+      }
+
+      return customers.map(parseMonitoredCustomer)
+    }
+
+    export function parsePartialMonitoredCustomer(customer: any): PartialMonitoredCustomer {
+      const result: PartialMonitoredCustomer = {
+        id: String(customer?.id ?? ""),
+        type: "customer"
+      }
+
+      if (hasOwnProperty(customer, "name")) {
+        result.name = String(customer?.name ?? "Visitor").trim()
+      }
+
+      if (hasOwnProperty(customer, "email")) {
+        result.email = String(customer?.email ?? "")
+      }
+
+      if (hasOwnProperty(customer, "name_is_default")) {
+        result.name_is_default = Boolean(customer?.name_is_default)
+      }
+
+      if (hasOwnProperty(customer, "created_at")) {
+        result.created_at = parseDate(customer?.created_at)
+      }
+
+      if (hasOwnProperty(customer, "visit")) {
+        result.visit = parseCustomerLastVisit(customer?.visit)
+      }
+
+      if (hasOwnProperty(customer, "statistics")) {
+        result.statistics = parseStatistics(customer?.statistics)
+      }
+
+      if (hasOwnProperty(customer, "chats")) {
+        result.chats = parseCustomerChats(customer?.chats)
+      }
+
+      if (hasOwnProperty(customer, "followed")) {
+        result.followed = Boolean(customer?.followed)
+      }
+
+      if (hasOwnProperty(customer, "online")) {
+        result.online = Boolean(customer?.online)
+      }
+
+      if (hasOwnProperty(customer, "group_ids")) {
+        result.group_ids = parseGroupIds(customer?.group_ids)
+      }
+
+      if (hasOwnProperty(customer, "state")) {
+        result.state = String(customer?.state ?? "")
+      }
+
+      if (hasOwnProperty(customer, "greeting_id")) {
+        result.greeting_id = customer?.greeting_id == null ? null : Number(customer.greeting_id)
+      }
+
+      if (hasOwnProperty(customer, "email_verified")) {
+        result.email_verified = Boolean(customer?.email_verified)
+      }
+
+      return result
     }
 
     export function parseSessionFields(fields?: any): SessionField[] {
@@ -2482,6 +2646,18 @@ export namespace v35 {
       }
 
       return d
+    }
+
+    export function parseNullableDate(date: any) {
+      if (date == null || date === "") {
+        return null
+      }
+
+      return parseDate(date)
+    }
+
+    function hasOwnProperty(value: any, key: string) {
+      return value != null && Object.prototype.hasOwnProperty.call(value, key)
     }
 
     export function parseHighlights(highlights: any): Highlight[] {
@@ -2749,19 +2925,22 @@ export namespace v35 {
           return {
             action: "incoming_customers",
             type: "push",
-            payload: data.payload as any
+            payload: {
+              customer_monitoring_level: String(data?.payload?.customer_monitoring_level ?? "online") as CustomerPushLevel,
+              customers: parseMonitoredCustomers(data?.payload?.customers),
+            }
           }
         case "incoming_customer":
           return {
             action: "incoming_customer",
             type: "push",
-            payload: data.payload as any
+            payload: parseMonitoredCustomer(data?.payload)
           }
         case "customer_updated":
           return {
             action: "customer_updated",
             type: "push",
-            payload: data.payload as any
+            payload: parsePartialMonitoredCustomer(data?.payload)
           }
         case "customer_page_updated":
           return {
