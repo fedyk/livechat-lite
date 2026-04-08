@@ -98,12 +98,24 @@ a {
   text-decoration: none;
 }
 
+.p-4 {
+  padding: 2rem !important;
+}
+
 .text-primary {
   color: var(--main-text-color);
 }
 
 .text-secondary {
   color: var(--second-text-color);
+}
+
+.text-success {
+  color: green;
+}
+
+.text-error {
+  color: red;
 }
 
 .text-small {
