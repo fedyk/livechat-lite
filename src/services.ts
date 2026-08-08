@@ -313,6 +313,8 @@ export interface AutoResize {
 export function createAutoResize(input: HTMLTextAreaElement): AutoResize {
   input.addEventListener("input", resize, false)
 
+  resize()
+
   return {
     dispose,
     resize
@@ -413,89 +415,14 @@ export function initNotifications() {
  * Reserse scroll for chat feeds
  */
 
-export namespace ReverseScroll {
-  export interface ReverseScroll {
-    isStickyToBottom: boolean
-    isStickyToCurrent: boolean
-    dispose(): void
-    stickToCurrent(): void
-    scrollToBottom(): void
-    scrollToCurrent(): void
-  }
+export class ReverseScroll {
+  static scrolls = new Map<Element, ReverseScroll>()
+  static resizeObserver = new ResizeObserver(ReverseScroll.onResize)
 
-  const scrolls = new Map<Element, ReverseScroll>()
-  const resizeObserver = new ResizeObserver(onResize)
-
-  export function create(scrollEl: HTMLElement, contentEl: HTMLElement): ReverseScroll {
-    let isStickyToBottom = true
-    let isStickyToCurrent = false
-    let previousScrollTop = 0
-    let previousScrollHeight = 0
-    let timerId = 0
-
-    scrollEl.addEventListener("scroll", onScroll, {
-      passive: true
-    })
-
-    const self: ReverseScroll = {
-      get isStickyToBottom() {
-        return isStickyToBottom
-      },
-      get isStickyToCurrent() {
-        return isStickyToCurrent
-      },
-      dispose,
-      stickToCurrent,
-      scrollToBottom,
-      scrollToCurrent,
-    }
-
-    scrolls.set(contentEl, self)
-
-    resizeObserver.observe(contentEl)
-
-    return self
-
-    function dispose() {
-      scrollEl.removeEventListener("scroll", onScroll)
-      scrolls.delete(contentEl)
-      resizeObserver.unobserve(contentEl)
-      clearTimeout(timerId)
-    }
-
-    function onScroll() {
-      clearTimeout(timerId)
-      timerId = window.setTimeout(checkScrollPosition, 50)
-    }
-
-    function checkScrollPosition() {
-      const scrollTop = Math.floor(scrollEl.scrollTop)
-
-      isStickyToBottom = scrollTop >= scrollEl.scrollHeight - scrollEl.clientHeight
-    }
-
-    function scrollToBottom() {
-      scrollEl.scrollTop = scrollEl.scrollHeight - scrollEl.clientHeight
-    }
-
-    function stickToCurrent() {
-      isStickyToCurrent = true
-      previousScrollTop = scrollEl.scrollTop
-      previousScrollHeight = scrollEl.scrollHeight
-    }
-
-    function scrollToCurrent() {
-      const scrollHeightDiff = previousScrollHeight - scrollEl.scrollHeight
-
-      scrollEl.scrollTop = previousScrollTop - scrollHeightDiff
-      isStickyToCurrent = false
-    }
-  }
-
-  function onResize(entries: ResizeObserverEntry[]) {
+  static onResize(entries: ResizeObserverEntry[]) {
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i];
-      const reverseScroll = scrolls.get(entry.target)
+      const reverseScroll = ReverseScroll.scrolls.get(entry.target)
 
       if (!reverseScroll) {
         return
@@ -508,6 +435,61 @@ export namespace ReverseScroll {
         reverseScroll.scrollToCurrent()
       }
     }
+  }
+
+  containerEl: HTMLElement
+  contentEl: HTMLElement
+  isStickyToBottom = true
+  isStickyToCurrent = false
+  previousScrollTop = 0
+  previousScrollHeight = 0
+  timerId = 0
+
+  constructor(containerEl: HTMLElement, contentEl: HTMLElement) {
+    this.containerEl = containerEl
+    this.contentEl = contentEl
+    this.containerEl.addEventListener("scroll", this.onScroll, {
+      passive: true
+    })
+
+    ReverseScroll.scrolls.set(contentEl, this)
+    ReverseScroll.resizeObserver.observe(contentEl)
+  }
+
+  dispose() {
+    this.containerEl.removeEventListener("scroll", this.onScroll)
+    window.clearTimeout(this.timerId)
+
+    ReverseScroll.scrolls.delete(this.contentEl)
+    ReverseScroll.resizeObserver.unobserve(this.contentEl)
+  }
+
+  onScroll = () => {
+    window.clearTimeout(this.timerId)
+    this.timerId = window.setTimeout(this.checkScrollPosition, 50)
+  }
+
+  checkScrollPosition = () => {
+    const scrollTop = Math.floor(this.containerEl.scrollTop)
+
+    this.isStickyToBottom = scrollTop >= this.containerEl.scrollHeight - this.containerEl.clientHeight
+  }
+
+  scrollToBottom() {
+    this.containerEl.scrollTop = this.containerEl.scrollHeight - this.containerEl.clientHeight
+  }
+
+  stickToCurrent() {
+    this.isStickyToCurrent = true
+    this.previousScrollTop = this.containerEl.scrollTop
+    this.previousScrollHeight = this.containerEl.scrollHeight
+  }
+
+  scrollToCurrent() {
+    const scrollHeightDiff = this.previousScrollHeight - this.containerEl.scrollHeight
+
+    this.containerEl.scrollTop = this.previousScrollTop - scrollHeightDiff
+    this.isStickyToCurrent = false
   }
 }
 

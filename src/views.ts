@@ -1512,7 +1512,7 @@ function createChatBodyView(props: ChatBodyViewProps): ChatBodyView {
     passive: true
   })
 
-  const reverseScroll = ReverseScroll.create(el, messagesElRef.current)
+  const reverseScroll = new ReverseScroll(el, messagesElRef.current)
   const storeListener = store.connect(state => {
     return {
       chat: state.chats.get(props.chatId),
@@ -1713,7 +1713,6 @@ function createComposerView(props: {
   chatId: string
 }, store = $Store(), controller = $Controller(), chatRouter = $ChatRouter()) {
   const composerId = `composer_${++composerCounter}`
-  const inputContainerRef = Ref<HTMLLabelElement>()
   const inputRef = Ref<HTMLTextAreaElement>()
   const sendButtonRef = Ref<HTMLButtonElement>()
   const fileInputRef = Ref<HTMLInputElement>()
@@ -1747,30 +1746,23 @@ function createComposerView(props: {
           ref: fileInputRef
         })
       ),
+      
+      h("textarea", {
+        id: composerId,
+        rows: 1,
+        className: "composer-input",
+        placeholder: placeholderText(),
+        ref: inputRef,
+        onkeydown: onInputKeyDown,
+        onkeyup: onInutKeyUp,
+      }),
 
-      h("label", {
-        htmlFor: composerId,
-        className: "composer-label",
-        ref: inputContainerRef
-      },
-        h("textarea", {
-          id: composerId,
-          rows: 1,
-          className: "composer-input",
-          placeholder: placeholderText(),
-          ref: inputRef,
-          onkeydown: onInputKeyDown,
-          onkeyup: onInutKeyUp,
-        }),
-        h("button", {
-          className: "composer-send",
-          ref: sendButtonRef,
-          disabled: true,
-          onclick: handleSend,
-        },
-          createIconEl({ name: "arrow-right-circle", size: "1.5em" })
-        )
-      )
+      h("button", {
+        className: "composer-send",
+        ref: sendButtonRef,
+        disabled: true,
+        onclick: handleSend,
+      }, createIconEl({ name: "arrow-right-circle", size: "1.5em" }))
     )
   )
 
@@ -1819,8 +1811,6 @@ function createComposerView(props: {
     }
 
     listeners.removeAll()
-
-    inputContainerRef.current = null!
 
     inputRef.current.onkeydown = null
     inputRef.current.onkeyup = null

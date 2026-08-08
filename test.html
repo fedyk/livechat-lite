@@ -17,28 +17,11 @@
     <div id="app"></div>
   </div>
 
+  <script type="module" src="./js/list.test.js"></script>
   <script type="module">
-    const target = document.querySelector("#app")
-
-    void (async function () {
-      try {
-        await import("./js/list.test.js")
-
-        const { run } = await import("./js/test.js")
-
-        await run()
-      }
-      catch (error) {
-        if (target instanceof HTMLElement) {
-          const pre = document.createElement("pre")
-
-          pre.textContent = String(error)
-          target.replaceChildren(pre)
-        }
-
-        throw error
-      }
-    })()
+    import("./js/test.js").then(function ({ run }) {
+      run(document.getElementById("app"))
+    })
   </script>
 </body>
 

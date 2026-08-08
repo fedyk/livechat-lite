@@ -146,62 +146,59 @@ export function createController(options: ControllerOptions) {
         timezone,
         customer_monitoring_level: "highest_available",
         reconnect: true,
-        pushes: {
-          "3.6": [
-            "agent_approved",
-            "agent_created",
-            "agent_deleted",
-            "agent_suspended",
-            "agent_unsuspended",
-            "agent_updated",
-            "bot_created",
-            "bot_deleted",
-            "bot_updated",
-            "chat_access_updated",
-            "chat_deactivated",
-            "chat_transferred",
-            "customer_left",
-            "customer_page_updated",
-            "customer_updated",
-            "event_properties_deleted",
-            "event_properties_updated",
-            "events_marked_as_seen",
-            "group_created",
-            "group_deleted",
-            "groups_status_updated",
-            "group_updated",
-            "incoming_chat",
-            "incoming_customer",
-            "incoming_customers",
-            "incoming_multicast",
-            "incoming_sneak_peek",
-            "queue_positions_updated",
-            "routing_status_set",
-            "thread_properties_deleted",
-            "thread_properties_updated",
-            "thread_tagged",
-            "thread_untagged",
-            "user_added_to_chat",
-            "user_removed_from_chat",
-            "incoming_event",
-            // "event_deleted",
-            // "thread_summary_set"
-          ]
-        },
+        // pushes: {
+        //   "3.6": [
+        //     "agent_approved",
+        //     "agent_created",
+        //     "agent_deleted",
+        //     "agent_suspended",
+        //     "agent_unsuspended",
+        //     "agent_updated",
+        //     "bot_created",
+        //     "bot_deleted",
+        //     "bot_updated",
+        //     "chat_access_updated",
+        //     "chat_deactivated",
+        //     "chat_transferred",
+        //     "customer_left",
+        //     "customer_page_updated",
+        //     "customer_updated",
+        //     "event_properties_deleted",
+        //     "event_properties_updated",
+        //     "events_marked_as_seen",
+        //     "group_created",
+        //     "group_deleted",
+        //     "groups_status_updated",
+        //     "group_updated",
+        //     "incoming_chat",
+        //     "incoming_customer",
+        //     "incoming_customers",
+        //     "incoming_multicast",
+        //     "incoming_sneak_peek",
+        //     "queue_positions_updated",
+        //     "routing_status_set",
+        //     "thread_properties_deleted",
+        //     "thread_properties_updated",
+        //     "thread_tagged",
+        //     "thread_untagged",
+        //     "user_added_to_chat",
+        //     "user_removed_from_chat",
+        //     "incoming_event",
+        //     // "event_deleted",
+        //     // "thread_summary_set"
+        //   ]
+        // },
         application: {
           name: "LiteChat for LiveChat",
           version: "0.0.1"
         },
       })
 
-      store.setInitialState(
-        initState.chats_summary,
-        initState.license,
-        initState.my_profile
-      )
-
       const state = store.getState()
-      const chatIds = helpers.unique(Object.keys(state.chats), initState.chats_summary.map(c => c.id))
+      const chatIds = helpers.unique(
+        Array.from(state.chats.keys()),
+        initState.chats_summary.map(c => c.id)
+      )
       const transitions = startChatTransitions(chatIds)
 
       store.dispatch({
