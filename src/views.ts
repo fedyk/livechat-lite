@@ -2276,10 +2276,8 @@ function TextMessage(props: MessageViewProps<v35.agent.MessageEvent>): Message<v
         className: "text-small text-secondary text-ellipsis"
       }, props.author.name),
 
-      h("div", { className: "message-text" },
-        h("div", {
-          innerHTML: html
-        }),
+      h("div", { className: "message-text clearfix" },
+        h("span", { innerHTML: html }),
         MessageIndicator({
           time: helpers.formatTime(props.message.created_at),
           status: props.messageStatus,
@@ -2441,7 +2439,7 @@ function FileMessage(props: MessageViewProps<v35.agent.FileEvent>): Message<v35.
           ),
           h("div", { className: "message-file-details" },
             h("div", { className: "text-primary text-ellipsis" }, props.message.name),
-            h("div", { className: "text-secondary" },
+            h("div", { className: "text-secondary clearfix" },
               h("span", { ref: subtitleRef }, helpers.formatSize(props.message.size, true)),
               h("span", { ref: progressLabelRef }, "Loading..."),
               MessageIndicator({
@@ -2583,7 +2581,7 @@ function RichMessageMessage(props: MessageViewProps<v35.agent.RichMessageEvent>)
               h("div", { className: "text-small text-secondary" }, props.author.name)
             ),
 
-            h("div", { className: "message-text" },
+            h("div", { className: "message-text clearfix" },
               element.title,
               MessageIndicator({
                 time: helpers.formatTime(props.message.created_at),
@@ -2693,7 +2691,7 @@ function FilledFormMessage(props: MessageViewProps<v35.agent.FilledFormEvent>): 
       !myMessage && props.author && h("div", {
         className: "text-small text-secondary text-ellipsis"
       }, props.author.name),
-      h("div", { className: "message-text" },
+      h("div", { className: "message-text clearfix" },
         h("div", { className: "text-primary text-bold mb-2" },
           helpers.stringifyFormType(props.message.form_type || props.message.form_id)
         ),
