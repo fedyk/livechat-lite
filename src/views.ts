@@ -1657,7 +1657,9 @@ function createChatBodyView(props: ChatBodyViewProps): ChatBodyView {
 
         if (rect.top >= 0 && rect.bottom <= clientHeight) {
           controller.maybeSyncChatGap(props.chatId, d, {
-            onLoad: reverseScroll.stickToCurrent
+            onLoad() {
+              reverseScroll.stickToCurrent()
+            }
           })
         }
 
