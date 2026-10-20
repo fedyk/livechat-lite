@@ -1764,7 +1764,7 @@ function createComposerView(props: {
         ref: sendButtonRef,
         disabled: true,
         onclick: handleSend,
-      }, createIconEl({ name: "arrow-right-circle", size: "1.5em" }))
+      }, ArrowRightCircleIcon({ size: "1.5em" }))
     )
   )
 
@@ -3318,67 +3318,6 @@ export function AvatarView(props: AvatarViewProps & {
   }
 }
 
-interface IconViewProps {
-  name: "moon" | "search" | "arrow-right-circle" | "caret-down-fill"
-  size?: string | number
-  className?: string
-}
-
-function createIconEl(props: IconViewProps) {
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg")
-  const size = String(props.size ?? 16)
-
-  svg.setAttribute("fill", "currentColor")
-  svg.setAttribute("width", size)
-  svg.setAttribute("height", size)
-  svg.setAttribute("viewBox", "0 0 16 16")
-
-  if (props.className) {
-    svg.setAttribute("class", props.className)
-  }
-
-  if (props.name === "moon") {
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path")
-    path.setAttribute("fill-rule", "evenodd")
-    path.setAttribute("d", "M14.53 10.53a7 7 0 0 1-9.058-9.058A7.003 7.003 0 0 0 8 15a7.002 7.002 0 0 0 6.53-4.47z")
-    svg.appendChild(path)
-  }
-  else if (props.name === "search") {
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path")
-    const path2 = document.createElementNS("http://www.w3.org/2000/svg", "path")
-
-    path.setAttribute("fill-rule", "evenodd")
-    path2.setAttribute("fill-rule", "evenodd")
-    path.setAttribute("d", "M10.442 10.442a1 1 0 0 1 1.415 0l3.85 3.85a1 1 0 0 1-1.414 1.415l-3.85-3.85a1 1 0 0 1 0-1.415z")
-    path2.setAttribute("d", "M6.5 12a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11zM13 6.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0z")
-    svg.appendChild(path)
-    svg.appendChild(path2)
-  }
-  else if (props.name === "arrow-right-circle") {
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path")
-    const path2 = document.createElementNS("http://www.w3.org/2000/svg", "path")
-
-    path.setAttribute("fill-rule", "evenodd")
-    path2.setAttribute("fill-rule", "evenodd")
-    path.setAttribute("d", "M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z")
-    path2.setAttribute("d", "M4 8a.5.5 0 0 0 .5.5h5.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5H4.5A.5.5 0 0 0 4 8z")
-    svg.appendChild(path)
-    svg.appendChild(path2)
-  }
-  else if (props.name === "caret-down-fill") {
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path")
-
-    path.setAttribute("fill-rule", "evenodd")
-    path.setAttribute("d", "M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z")
-    svg.appendChild(path)
-  }
-  else {
-    throw new Error("Unsupported name for icons")
-  }
-
-  return svg
-}
-
 function createModalsView() {
   const store = $Store()
   const el = h("div", {})
@@ -3587,8 +3526,44 @@ export function createProgressButton(props: ProgressButtonProps) {
 
 interface IconProps {
   class?: string
-  size?: number
+  size?: string | number
   ref?: dom.Ref<SVGSVGElement>
+}
+
+function ArrowRightCircleIcon(props?: IconProps) {
+  return svg("svg", {
+    class: props?.class ?? "",
+    fill: "currentColor",
+    width: props?.size ?? 16,
+    height: props?.size ?? 16,
+    viewBox: "0 0 16 16",
+    ref: props?.ref
+  },
+    svg("path", {
+      "fill-rule": "evenodd",
+      d: "M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"
+    }),
+    svg("path", {
+      "fill-rule": "evenodd",
+      d: "M4 8a.5.5 0 0 0 .5.5h5.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5H4.5A.5.5 0 0 0 4 8z"
+    })
+  )
+}
+
+function CaretDownFillIcon(props?: IconProps) {
+  return svg("svg", {
+    class: props?.class ?? "",
+    fill: "currentColor",
+    width: props?.size ?? 16,
+    height: props?.size ?? 16,
+    viewBox: "0 0 16 16",
+    ref: props?.ref
+  },
+    svg("path", {
+      "fill-rule": "evenodd",
+      d: "M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"
+    })
+  )
 }
 
 function CloseIcon(props?: IconProps) {

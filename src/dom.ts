@@ -59,8 +59,8 @@ export function createElementNS<K extends keyof SVGElementTagNameMap>(
     "stroke-dasharray": string
     "stroke-dashoffset": string
     "transform": string
-    width: number
-    height: number
+    width: string | number
+    height: string | number
     viewBox: string
     d: string
     "fill-rule": string
