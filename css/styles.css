@@ -663,11 +663,28 @@ input.switch-checkbox:checked+label.switch-label:after {
   justify-content: space-between;
 }
 
+.chat-item-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.chat-item-channel {
+  display: flex;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
 .chat-item-name {
+  min-width: 0;
   font-weight: 500;
 }
 
 .chat-item-meta {
+  flex-shrink: 0;
+  margin-left: 8px;
   font-size: 0.8rem;
 }
 
