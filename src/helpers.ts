@@ -767,13 +767,18 @@ export function formatTime(time: number | Date) {
 
   // the same day
   if (date.toDateString() === now.toDateString()) {
-    const hours = date.getHours().toString().padStart(2, "0")
-    const minutes = date.getMinutes().toString().padStart(2, "0")
-
-    return `${hours}:${minutes}`
+    return formatHoursMinutes(date)
   }
 
   return new Intl.DateTimeFormat().format(date)
+}
+
+export function formatHoursMinutes(time: number | Date) {
+  const date = time instanceof Date ? time : new Date(time)
+  const hours = date.getHours().toString().padStart(2, "0")
+  const minutes = date.getMinutes().toString().padStart(2, "0")
+
+  return `${hours}:${minutes}`
 }
 
 export function formatSize(bytes: number, si: boolean = false, dp = 1) {
@@ -1561,31 +1566,58 @@ export function linkify(text: string) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;")
-    .replace(/(?:(?:https?:\/\/)|(?:www\.))[\p{L}\p{N}.-]+\.[\p{L}]{2,}(?:[^\s<]*)/giu, function(raw) {    
-    let url = raw;
-    let trailing = "";
+    .replace(/(?:(?:https?:\/\/)|(?:www\.))[\p{L}\p{N}.-]+\.[\p{L}]{2,}(?:[^\s<]*)/giu, function (raw) {
+      let url = raw;
+      let trailing = "";
 
-    while (/[),.!?:;]$/.test(url)) {
-      trailing = url.slice(-1) + trailing;
-      url = url.slice(0, -1);
+      while (/[),.!?:;]$/.test(url)) {
+        trailing = url.slice(-1) + trailing;
+        url = url.slice(0, -1);
+      }
+
+      const href = url.startsWith("www.") ? `https://${url}` : url;
+      const allowed = /^(https?:)\/\//i.test(href);
+
+      if (!allowed) {
+        return raw;
+      }
+
+      try {
+        new URL(href);
+      } catch {
+        return raw + trailing;
+      }
+
+      const safeAttrs = 'target="_blank" rel="noopener noreferrer nofollow ugc"';
+      const display = url
+
+      return `<a href="${href}" ${safeAttrs}>${display}</a>${trailing}`;
+    })
+}
+
+export function getDataLabels(chatEntities: ChatEntity[]) {
+  const today = new Date().toDateString()
+  let previousDay: string | undefined
+
+  return chatEntities.map(function (message) {
+    if (!("created_at" in message) || message.type === "sneak_peek") {
+      return null
     }
 
-    const href = url.startsWith("www.") ? `https://${url}` : url;
-    const allowed = /^(https?:)\/\//i.test(href);
+    const day = message.created_at.toDateString()
 
-    if (!allowed) {
-      return raw;
+    if (day === previousDay) {
+      return null
     }
 
-    try {
-      new URL(href);
-    } catch {
-      return raw + trailing;
+    previousDay = day
+
+    if (day === today) {
+      return "Today"
     }
 
-    const safeAttrs = 'target="_blank" rel="noopener noreferrer nofollow ugc"';
-    const display = url
-
-    return `<a href="${href}" ${safeAttrs}>${display}</a>${trailing}`;
+    return new Intl.DateTimeFormat(undefined, {
+      day: "numeric", month: "long", year: "numeric"
+    }).format(message.created_at)
   })
 }

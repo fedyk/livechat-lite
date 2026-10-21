@@ -31,6 +31,8 @@ export type ThreadSyncStatus = "idle" | "fetching"
 
 export type MessageStatus = "sending" | "sent" | "failed"
 
+export type ComposerMode = "message" | "note"
+
 export type NetworkStatus = "offline" | "connecting" | "updating" | "online"
 
 export type ChatRoute = "my" | "other" | "closed" | "queued" | "supervised" | "unassigned" | "pinned"

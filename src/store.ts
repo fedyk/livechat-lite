@@ -36,6 +36,7 @@ export interface State {
   isUpdatingRoutingStatus: boolean
 
   selectedChatId: string | null
+  composerModes: Map<string, t.ComposerMode>
   myProfile: v35.agent.MyProfile | null
   license: v35.agent.License | null
   cannedResponses: Record<number, t.CannedResponse[]>
@@ -104,6 +105,7 @@ export function createStore(initialState: Pick<State, "credentials" | "searchRec
     myProfile: null,
     myChatIds: [],
     selectedChatId: null,
+    composerModes: new Map(),
     selectedChatFolder: "all",
     supervisedChatIds: [],
     queuedChatIds: [],
@@ -153,6 +155,7 @@ export function createStore(initialState: Pick<State, "credentials" | "searchRec
   return {
     dispose,
     getState,
+    getComposerMode,
     subscribe,
     connect,
     lazyConnect,
@@ -173,6 +176,10 @@ export function createStore(initialState: Pick<State, "credentials" | "searchRec
 
   function getState(): Readonly<State> {
     return state
+  }
+
+  function getComposerMode(chatId: string, chatRoute: t.ChatRoute | void): t.ComposerMode {
+    return state.composerModes.get(chatId) ?? (chatRoute === "supervised" ? "note" : "message")
   }
 
   function subscribe(subscriber: StoreSubscriber<State>): Unsubscriber {

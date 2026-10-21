@@ -1562,9 +1562,11 @@ function createChatBodyView(props: ChatBodyViewProps): ChatBodyView {
   ) {
     const users = helpers.mapBy(chat.users, "id")
     const customer = helpers.getChatRecipient(chat.users)
+    const dateLabels = helpers.getDataLabels(chatEntities)
 
     list2<ChatEntity, {
-      view: Message<ChatEntity>
+      message: Message<ChatEntity>
+      dateEl: HTMLDivElement
     }>({
       target: messagesElRef.current,
       values: chatEntities,
@@ -1572,7 +1574,7 @@ function createChatBodyView(props: ChatBodyViewProps): ChatBodyView {
       enter(ctx) {
         const fileUpload = ctx.value.type === "file" && ctx.value.custom_id ? filesUpload.get(ctx.value.custom_id) : null
 
-        ctx.view = Message({
+        ctx.message = Message({
           message: ctx.value,
           nextMessage: chatEntities[ctx.index + 1],
           prevMessage: chatEntities[ctx.index - 1],
@@ -1584,12 +1586,22 @@ function createChatBodyView(props: ChatBodyViewProps): ChatBodyView {
           progressSignal: fileUpload ? fileUpload[0] : null,
         })
 
-        ctx.el = ctx.view.el
+        ctx.dateEl = h("div", { className: "message-date" })
+        ctx.dateEl.textContent = dateLabels[ctx.index]
+        ctx.dateEl.hidden = !dateLabels[ctx.index]
+
+        ctx.el = h("div", { className: "message-entry" },
+          ctx.dateEl,
+          ctx.message.el
+        )
       },
       update(ctx) {
+        ctx.dateEl.textContent = dateLabels[ctx.index]
+        ctx.dateEl.hidden = !dateLabels[ctx.index]
+
         const fileUpload = ctx.value.type === "file" && ctx.value.custom_id ? filesUpload.get(ctx.value.custom_id) : null
 
-        ctx.view.update({
+        ctx.message.update({
           message: ctx.value,
           nextMessage: chatEntities[ctx.index + 1],
           prevMessage: chatEntities[ctx.index - 1],
@@ -1602,8 +1614,10 @@ function createChatBodyView(props: ChatBodyViewProps): ChatBodyView {
         })
       },
       exit(ctx) {
-        ctx.view.dispose()
-        ctx.view = null!
+        ctx.dateEl.remove()
+        ctx.dateEl = null!
+        ctx.message.dispose()
+        ctx.message = null!
         ctx.el.remove()
       }
     })
@@ -1715,6 +1729,7 @@ function createComposerView(props: {
   chatId: string
 }, store = $Store(), controller = $Controller(), chatRouter = $ChatRouter()) {
   const composerId = `composer_${++composerCounter}`
+  const modeSelectRef = Ref<HTMLSelectElement>()
   const inputRef = Ref<HTMLTextAreaElement>()
   const sendButtonRef = Ref<HTMLButtonElement>()
   const fileInputRef = Ref<HTMLInputElement>()
@@ -1729,7 +1744,7 @@ function createComposerView(props: {
 
   const el = h("div", {
     className: helpers.cx("composer", {
-      "composer--supervised": chatRoute === "supervised"
+      "composer--supervised": store.getComposerMode(props.chatId, chatRoute) === "note"
     })
   },
     new ComposerActions({
@@ -1748,7 +1763,7 @@ function createComposerView(props: {
           ref: fileInputRef
         })
       ),
-      
+
       h("textarea", {
         id: composerId,
         rows: 1,
@@ -1764,7 +1779,20 @@ function createComposerView(props: {
         ref: sendButtonRef,
         disabled: true,
         onclick: handleSend,
-      }, ArrowRightCircleIcon({ size: "1.5em" }))
+      }, SendIcon({ size: 24 })),
+      h("div", { className: "composer-mode" },
+        CaretDownFillIcon({ size: "1em" }),
+        h("select", {
+          id: `${composerId}_mode`,
+          className: "composer-mode-select",
+          ariaLabel: "Message type",
+          ref: modeSelectRef,
+          onchange: handleModeChange,
+        },
+          h("option", { value: "message" }, "Message"),
+          h("option", { value: "note" }, "Note")
+        )
+      )
     )
   )
 
@@ -1784,12 +1812,13 @@ function createComposerView(props: {
     }
   }))
 
-  const disconnectStore = $Store().lazyConnect(
+  const disconnectStore = store.lazyConnect(
     state => {
       const chat = state.chats.get(props.chatId)
 
       return {
         cannedResponses: state.cannedResponses,
+        composerMode: state.composerModes.get(props.chatId),
         chatGroupIds: chat?.access.group_ids
       }
     },
@@ -1807,6 +1836,9 @@ function createComposerView(props: {
 
   function dispose() {
     disconnectStore()
+
+    modeSelectRef.current.onchange = null
+    modeSelectRef.current = null!
 
     if (autoResize) {
       autoResize.dispose()
@@ -1923,6 +1955,20 @@ function createComposerView(props: {
     }
   }
 
+  function handleModeChange() {
+    const mode = modeSelectRef.current.value
+
+    if (mode !== "message" && mode !== "note") {
+      return
+    }
+
+    store.dispatch(state => ({
+      composerModes: new Map(state.composerModes).set(props.chatId, mode)
+    }))
+
+    render()
+  }
+
   function handleChangeFileInput(event: Event) {
     if (!fileInputRef.current) {
       return
@@ -1946,7 +1992,12 @@ function createComposerView(props: {
   }
 
   function render() {
-    el.classList.toggle("composer--supervised", chatRoute === "supervised")
+    const mode = store.getComposerMode(props.chatId, chatRoute)
+
+    el.classList.toggle("composer--supervised", mode === "note")
+
+    modeSelectRef.current.value = mode
+    modeSelectRef.current.title = mode === "note" ? "Note" : "Message"
 
     inputRef.current.placeholder = placeholderText()
 
@@ -1983,11 +2034,11 @@ function createComposerView(props: {
   }
 
   function placeholderText() {
-    if (chatRoute === "supervised") {
+    if (store.getComposerMode(props.chatId, chatRoute) === "note") {
       return "Write a private note… The customer can’t see this."
     }
 
-    return "Write a message..."
+    return "Write a message…"
   }
 }
 
@@ -2281,7 +2332,7 @@ function TextMessage(props: MessageViewProps<v35.agent.MessageEvent>): Message<v
       h("div", { className: "message-text clearfix" },
         h("span", { innerHTML: html }),
         MessageIndicator({
-          time: helpers.formatTime(props.message.created_at),
+          time: helpers.formatHoursMinutes(props.message.created_at),
           status: props.messageStatus,
           isMessageSeen: props.isMessageSeen,
           ref: indicatorRef
@@ -2309,7 +2360,7 @@ function TextMessage(props: MessageViewProps<v35.agent.MessageEvent>): Message<v
   function update(props: MessageViewProps<v35.agent.MessageEvent>) {
     if (indicatorRef.current) {
       indicatorRef.current.update({
-        time: helpers.formatTime(props.message.created_at),
+        time: helpers.formatHoursMinutes(props.message.created_at),
         status: props.messageStatus,
         isMessageSeen: props.isMessageSeen,
         ref: indicatorRef
@@ -2371,7 +2422,7 @@ function FileMessage(props: MessageViewProps<v35.agent.FileEvent>): Message<v35.
       MessageIndicator({
         sticky: true,
         contrast: true,
-        time: helpers.formatTime(props.message.created_at),
+        time: helpers.formatHoursMinutes(props.message.created_at),
         status: props.messageStatus,
         isMessageSeen: props.isMessageSeen,
         ref: messageIndicatorRef
@@ -2407,7 +2458,7 @@ function FileMessage(props: MessageViewProps<v35.agent.FileEvent>): Message<v35.
       MessageIndicator({
         sticky: true,
         contrast: true,
-        time: helpers.formatTime(props.message.created_at),
+        time: helpers.formatHoursMinutes(props.message.created_at),
         status: props.messageStatus,
         isMessageSeen: props.isMessageSeen,
         ref: messageIndicatorRef
@@ -2445,7 +2496,7 @@ function FileMessage(props: MessageViewProps<v35.agent.FileEvent>): Message<v35.
               h("span", { ref: subtitleRef }, helpers.formatSize(props.message.size, true)),
               h("span", { ref: progressLabelRef }, "Loading..."),
               MessageIndicator({
-                time: helpers.formatTime(props.message.created_at),
+                time: helpers.formatHoursMinutes(props.message.created_at),
                 status: props.messageStatus,
                 isMessageSeen: props.isMessageSeen,
                 ref: messageIndicatorRef
@@ -2496,7 +2547,7 @@ function FileMessage(props: MessageViewProps<v35.agent.FileEvent>): Message<v35.
   function update(nextProps: MessageViewProps<v35.agent.FileEvent>) {
     if (messageIndicatorRef.current) {
       messageIndicatorRef.current.update({
-        time: helpers.formatTime(nextProps.message.created_at),
+        time: helpers.formatHoursMinutes(nextProps.message.created_at),
         status: nextProps.messageStatus,
         isMessageSeen: nextProps.isMessageSeen,
         ref: messageIndicatorRef
@@ -2586,7 +2637,7 @@ function RichMessageMessage(props: MessageViewProps<v35.agent.RichMessageEvent>)
             h("div", { className: "message-text clearfix" },
               element.title,
               MessageIndicator({
-                time: helpers.formatTime(props.message.created_at),
+                time: helpers.formatHoursMinutes(props.message.created_at),
                 status: props.messageStatus,
                 isMessageSeen: props.isMessageSeen,
                 ref: messageIndicatorRef
@@ -2658,7 +2709,7 @@ function RichMessageMessage(props: MessageViewProps<v35.agent.RichMessageEvent>)
   function update(props: MessageViewProps<v35.agent.RichMessageEvent>) {
     if (messageIndicatorRef.current) {
       messageIndicatorRef.current.update({
-        time: helpers.formatTime(props.message.created_at),
+        time: helpers.formatHoursMinutes(props.message.created_at),
         status: props.messageStatus,
         isMessageSeen: props.isMessageSeen,
         ref: messageIndicatorRef
@@ -2704,7 +2755,7 @@ function FilledFormMessage(props: MessageViewProps<v35.agent.FilledFormEvent>): 
           )
         }),
         MessageIndicator({
-          time: helpers.formatTime(props.message.created_at),
+          time: helpers.formatHoursMinutes(props.message.created_at),
           status: props.messageStatus,
           isMessageSeen: props.isMessageSeen,
           ref: messageIndicatorRef
@@ -3269,7 +3320,7 @@ export function AvatarView(props: AvatarViewProps & {
   function onImgLoad() {
     hasValidImage = true
     hasImageError = false
-    
+
     if (imageElRef.current) {
       imageElRef.current.classList.remove("hidden")
     }
@@ -3530,22 +3581,17 @@ interface IconProps {
   ref?: dom.Ref<SVGSVGElement>
 }
 
-function ArrowRightCircleIcon(props?: IconProps) {
+function SendIcon(props?: IconProps) {
   return svg("svg", {
     class: props?.class ?? "",
     fill: "currentColor",
-    width: props?.size ?? 16,
-    height: props?.size ?? 16,
-    viewBox: "0 0 16 16",
+    width: props?.size ?? 24,
+    height: props?.size ?? 24,
+    viewBox: "0 -960 960 960",
     ref: props?.ref
   },
     svg("path", {
-      "fill-rule": "evenodd",
-      d: "M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"
-    }),
-    svg("path", {
-      "fill-rule": "evenodd",
-      d: "M4 8a.5.5 0 0 0 .5.5h5.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5H4.5A.5.5 0 0 0 4 8z"
+      d: "M120-160v-240l320-80-320-80v-240l760 320-760 320Z"
     })
   )
 }

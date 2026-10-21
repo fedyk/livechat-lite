@@ -993,7 +993,7 @@ export function createController(options: ControllerOptions) {
       throw new Error("chat should be activated")
     }
 
-    if (getChatRoute(chatId) === "supervised") {
+    if (store.getComposerMode(chatId, getCurrentChatRoute(chatId)) === "note") {
       visibility = "agents"
     }
 
@@ -1099,7 +1099,7 @@ export function createController(options: ControllerOptions) {
 
     let visibility: v35.agent.Visibility = "all"
 
-    if (getCurrentChatRoute(chatId) === "supervised") {
+    if (store.getComposerMode(chatId, getCurrentChatRoute(chatId)) === "note") {
       visibility = "agents"
     }
 
