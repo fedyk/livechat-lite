@@ -1,7 +1,7 @@
 import { $Controller } from "./controller.js";
 import { createElement as h, createRef as Ref } from "./dom.js";
 import { createInjector, getColorModeName, sortAgents, sortGroups } from "./helpers.js";
-import { list2 } from "./list.js";
+import { list } from "./list.js";
 import { v35 } from "./livechat-api.js";
 import { $Store } from "./store.js";
 import { ColorMode } from "./types.js";
@@ -133,7 +133,7 @@ export function createCommandsView() {
     listEl.classList.toggle("d-none", data.length === 0 || selected?.status === "pending")
     emptyListEl.classList.toggle("d-none", data.length > 0 || selected?.status === "pending")
 
-    list2<ICommand, { view: ICommandView }>({
+    list<ICommand, { view: ICommandView }>({
       target: listEl,
       values: data,
       key: d => d?.id,

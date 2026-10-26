@@ -1,5 +1,7 @@
 # Repository guidance
 
+When a product requirement is unresolved, ask for clarification instead of silently choosing behavior. Explicit later user decisions supersede earlier requirements.
+
 ## Code style
 
 - Use braces and multiline bodies for every `if`, including single-statement guards. Never write `if (condition) action()`.
@@ -52,30 +54,3 @@ status.replaceChildren("Download unavailable. ", h("a", {
 - Run `npm run build` for TypeScript validation and `git diff --check` for whitespace issues.
 - Browser tests use the small harness in `src/test.ts`; `test.html` loads the test modules. Serve the repository locally and open that page to run them. `npm run dev` serves port 9090; use an available localhost port if occupied.
 - There is no package-script test runner. A passing build is not proof that browser tests ran. Report actual checks and any unverified live-backend behavior accurately.
-
-## Media viewer: agreed behavior
-
-- `src/media-viewer.ts` implements one global full-screen dark viewer using a native modal `dialog`. `src/media-viewer.test.ts` covers its behavior.
-- `state.mediaPreview` is transient and separate from `state.openModal`. The viewer can appear above an existing modal; closing it preserves that modal and its scroll lock. Changing chats must not close the viewer.
-- Open from successful message attachments, avatars in the chat feed, and rich-message card images. Other avatar locations are not automatically preview triggers. Avatar titles and download names use the person's name.
-- Show the filename, Download, and Close actions. Restore focus on close and keep underlying UI from responding while the viewer is open.
-- Keep status below the media, separate from the filename toolbar, with reserved space when empty and `role="status"`.
-- Initially fit the whole image into the available space, preserve aspect ratio, and do not enlarge small images above their original size.
-- Cmd +/− on macOS and Ctrl +/− on Windows/Linux zoom images. Cmd/Ctrl + 0 restores the initial fitted size and centered position.
-- Allow dragging when zoomed in. A drag release must not be interpreted as a click that closes the viewer.
-- Image clicks, backdrop clicks, Escape, and Close dismiss the viewer. Video clicks retain normal player behavior.
-- Inline videos autoplay muted without native controls. A transparent, keyboard-accessible overlay covering the video opens its preview; do not restore the old visible "Expand video" button.
-- Opening a video preview pauses the inline player and starts the modal video from the beginning with sound and controls. Closing stops modal playback and resumes the original inline player at its previous position if it still exists.
-- Browsers may reject autoplay with sound; leave usable playback controls and a visible explanation. Remote download fetches may be blocked; provide an original-file fallback.
-- Treat `.webm` filenames case-insensitively as `video/webm`, even when the supplied MIME type is generic or missing. Use `helpers.getFileContentType` consistently for rendering, source MIME, and preview kind.
-- Attachment previews are enabled only after upload succeeds. Replace temporary blob URLs with the uploaded server URL before revoking them, and update rendered attachment sources.
-- Keep cleanup explicit: remove listeners, disconnect observers, stop modal playback, abort pending downloads, and revoke viewer-owned object URLs.
-
-## Outside the current media scope
-
-- Previous/next media navigation or loading older history for navigation.
-- Previewing uploads in progress or files in the pre-send confirmation modal.
-- Mobile/touch support, pinch gestures, and scroll-wheel zoom.
-- A separate actual-size/100% control.
-
-When a product requirement is unresolved, ask for clarification instead of silently choosing behavior. Explicit later user decisions supersede earlier requirements.

@@ -39,6 +39,7 @@ export function createController(options: ControllerOptions) {
   const visibleChatViewRef = createRef<{
     highlightEvent(eventId: string): void
   }>()
+  let agentsRequest: Promise<void> | null = null
   let searchAbortController: AbortController | null = null
   let autoReconnect = true
   let reconnectAttempts = 0
@@ -70,6 +71,8 @@ export function createController(options: ControllerOptions) {
     pickChatFromQueue,
     search,
     selectChat,
+    selectAgent,
+    maybeSyncAgents,
     selectedChatFolder,
     selectSearchResult,
     sendFileMessage,
@@ -919,6 +922,12 @@ export function createController(options: ControllerOptions) {
       selectedChatFolder
     })
 
+    if (selectedChatFolder === "agents") {
+      maybeSyncAgents().catch(function () {
+        // The agent list renders the stored error and retry action.
+      })
+    }
+
     if (selectedChatFolder === "archived" || selectedChatFolder === "all") {
       maybeSyncArchivedChats()
     }
@@ -1463,6 +1472,13 @@ export function createController(options: ControllerOptions) {
     }
   }
 
+  function selectAgent(agentId: string) {
+    store.dispatch({
+      selectedAgentId: agentId,
+      selectedChatId: null
+    })
+  }
+
   function selectChat(chatId: string) {
     const state = store.getState();
     const chat = state.chats.get(chatId)
@@ -1473,7 +1489,8 @@ export function createController(options: ControllerOptions) {
     }
 
     store.dispatch({
-      selectedChatId: chatId
+      selectedChatId: chatId,
+      selectedAgentId: null
     })
 
     const promises = [
@@ -1920,12 +1937,46 @@ export function createController(options: ControllerOptions) {
     })
   }
 
-  async function syncAgents() {
-    const accessToken = await getAccessToken()
-    const signal = AbortSignal.timeout(30_000)
-    const agents = await v35.conf.listAgents(accessToken, {}, signal)
+  async function maybeSyncAgents() {
+    const state = store.getState()
 
-    store.dispatch({ agents })
+    if (state.agentsStatus === "loaded") {
+      return
+    }
+
+    if (state.agentsStatus === "loading") {
+      return
+    }
+
+    return syncAgents()
+  }
+
+  async function syncAgents() {
+    store.dispatch({
+      agentsStatus: "loading",
+      agentsError: ""
+    })
+
+    try {
+      const accessToken = await getAccessToken()
+      const signal = AbortSignal.timeout(30_000)
+      const agents = await v35.conf.listAgents(accessToken, {
+        fields: ["job_title"]
+      }, signal)
+
+      store.dispatch({
+        agents,
+        agentsStatus: "loaded"
+      })
+    }
+    catch (error) {
+      console.log(error)
+      store.dispatch({
+        agentsStatus: "error",
+        agentsError: error instanceof Error ? error.message : String(error)
+      })
+      throw error
+    }
   }
 
   async function syncGroups() {
@@ -2032,6 +2083,7 @@ export function createController(options: ControllerOptions) {
   function selectSearchResult(result: types.SearchResult) {
     store.dispatch({
       selectedChatId: result.chatId,
+      selectedAgentId: null,
       searchSelectedResult: result.id,
     })
 

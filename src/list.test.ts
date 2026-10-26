@@ -1,7 +1,7 @@
-import { list2 } from "./list.js";
+import { list } from "./list.js";
 import { describe, equal, ok, test } from "./test.js";
 
-describe("list", function () {
+describe(list.name, function () {
   describe("render", function () {
     const target = document.createElement("div")
 
@@ -24,7 +24,7 @@ describe("list", function () {
     })
 
     function render(values: number[]) {
-      list2({
+      list({
         target,
         values,
         key(value, index) {
@@ -66,7 +66,7 @@ describe("list", function () {
     })
 
     function render(values: number[]) {
-      list2({
+      list({
         target,
         values,
         key(value, index) {
@@ -149,7 +149,7 @@ describe("list", function () {
     })
 
     function render(values: Props[]) {
-      list2<Props, {
+      list<Props, {
         view: View
       }>({
         target,

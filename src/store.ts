@@ -35,6 +35,7 @@ export interface State {
   routingStatuses: Map<string, v35.agent.RoutingStatus>
   isUpdatingRoutingStatus: boolean
 
+  selectedAgentId: string | null
   selectedChatId: string | null
   composerModes: Map<string, t.ComposerMode>
   myProfile: v35.agent.MyProfile | null
@@ -53,6 +54,8 @@ export interface State {
 
   networkStatus: t.NetworkStatus
 
+  agentsStatus: "unknown" | "loading" | "loaded" | "error"
+  agentsError: string
   agents: v35.conf.Agent[]
   groups: v35.conf.Group[]
 
@@ -106,6 +109,7 @@ export function createStore(initialState: Partial<State>) {
     license: null,
     myProfile: null,
     myChatIds: [],
+    selectedAgentId: null,
     selectedChatId: null,
     composerModes: new Map(),
     selectedChatFolder: "all",
@@ -136,6 +140,8 @@ export function createStore(initialState: Partial<State>) {
     monitoredCustomers: new Map(),
     customerMonitoringLevel: null,
     networkStatus: "offline",
+    agentsStatus: "unknown",
+    agentsError: "",
     agents: [],
     groups: [],
     searchMode: null,

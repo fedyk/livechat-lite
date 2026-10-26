@@ -19,7 +19,7 @@ import { $Store, State } from "./store.js"
 import { v35 } from "./livechat-api.js"
 import { $CommandsController, createCommandsView } from "./commands.js"
 import type { CannedResponse, Unsubscriber } from "./types.js"
-import { BaseContext, ElementWithContext, list2 } from "./list.js"
+import { BaseContext, ElementWithContext, list } from "./list.js"
 import { createMediaViewer, openMediaPreview } from "./media-viewer.js"
 import type {
   ArchivedChatsStatus,
@@ -491,6 +491,12 @@ function createChatFoldersView(options: ChatFoldersViewOptions): ChatFoldersView
       controller.maybeSyncArchivedChats()
     }
   }, "Archived")
+  const agentsTab = h("button", {
+    className: "tab",
+    onclick: function () {
+      controller.selectedChatFolder("agents")
+    }
+  }, "Agents")
   const el = h("div", { className: "tabs flex-shrink-0 border-bottom" },
     allTab,
     myTab,
@@ -498,6 +504,7 @@ function createChatFoldersView(options: ChatFoldersViewOptions): ChatFoldersView
     queuedTab,
     unassignedTab,
     archivedTab,
+    agentsTab,
   )
   const storeListener = store.connect(function (state) {
     return {
@@ -533,6 +540,7 @@ function createChatFoldersView(options: ChatFoldersViewOptions): ChatFoldersView
     unassignedTab.classList.toggle("active", props.selectedChatFolder === "unassigned")
     // unassignedTab.classList.toggle("hidden", props.unassignedChatIds.size === 0 && props.selectedChatFolder !== "unassigned")
     archivedTab.classList.toggle("active", props.selectedChatFolder === "archived")
+    agentsTab.classList.toggle("active", props.selectedChatFolder === "agents")
     myTabBadge.textContent = String(props.countMyUnseenChats)
     myTabBadge.classList.toggle("d-none", props.countMyUnseenChats === 0)
     supervisedTabBadge.textContent = String(props.countUnseenSupervisedChats)
@@ -557,6 +565,7 @@ function createChatFoldersView(options: ChatFoldersViewOptions): ChatFoldersView
     supervisedTab.onclick = null
     queuedTab.onclick = null
     unassignedTab.onclick = null
+    agentsTab.onclick = null
     archivedTab.onclick = null
   }
 }
@@ -577,6 +586,7 @@ function ChatListView(options: ChatListViewOptions): ChatListView {
   const loaderEl = h("div", { className: "sticky-center hidden" },
     h("div", { className: "loader" })
   )
+  const agentsList = AgentsChatsList()
   const allChatsList = h("div", { className: "chats-list" })
   const myChatsList = h("div", { className: "chats-list" })
   const supervisedChatsList = h("div", { className: "chats-list" })
@@ -587,6 +597,7 @@ function ChatListView(options: ChatListViewOptions): ChatListView {
   // let loaderArchivedChats: HTMLDivElement
 
   el.append(
+    agentsList.el,
     emptyStateEl,
     loaderEl,
     allChatsList,
@@ -625,6 +636,14 @@ function ChatListView(options: ChatListViewOptions): ChatListView {
       inactiveChatsStatus: state.inactiveChatsStatus,
     }
   }, function name(props) {
+    // toggle agents list
+    agentsList.el.classList.toggle("hidden", props.selectedChatFolder !== "agents")
+
+    // when agents tab open, hide chat's loader and empty state
+    loaderEl.classList.toggle("hidden", props.selectedChatFolder === "agents")
+    emptyStateEl.classList.toggle("hidden", props.selectedChatFolder === "agents")
+
+    // toggle chats' list
     allChatsList.classList.toggle("hidden", props.selectedChatFolder !== "all")
     myChatsList.classList.toggle("hidden", props.selectedChatFolder !== "my")
     supervisedChatsList.classList.toggle("hidden", props.selectedChatFolder !== "supervised")
@@ -673,6 +692,7 @@ function ChatListView(options: ChatListViewOptions): ChatListView {
 
   function dispose() {
     storeListener()
+    agentsList.dispose()
     allChatsList.removeEventListener("scroll", onAllChatsScroll)
     archivedChatsList.removeEventListener("scroll", onArchivedChatsScroll)
     unassignedChatsList.removeEventListener("scroll", onUnassignedChatsScroll)
@@ -766,7 +786,7 @@ function ChatListView(options: ChatListViewOptions): ChatListView {
   }
 
   function renderChatsList(target: HTMLElement, chatIds: string[]) {
-    list2<string, {
+    list<string, {
       view: ChatsListItemView
     }>({
       target,
@@ -885,7 +905,7 @@ function createChatSearchResultsView(options: ChatSearchResultsViewOptions) {
   }
 
   function updateRecentQueries(target: HTMLElement, queries: string[]) {
-    list2<string, {
+    list<string, {
       btnRef: dom.Ref<HTMLButtonElement>
       labelRef: dom.Ref<HTMLSpanElement>
     }>({
@@ -928,7 +948,7 @@ function createChatSearchResultsView(options: ChatSearchResultsViewOptions) {
   }
 
   function updateResults(target: HTMLElement, results: SearchResult[], searchSelectedResult: string | null) {
-    list2<SearchResult, {
+    list<SearchResult, {
       listElRef: dom.Ref<HTMLDivElement>
       avatarViewRef: dom.Ref<AvatarView>
     }>({
@@ -1163,15 +1183,21 @@ interface ChatsViewOptions {
 
 function createChatsView(options?: ChatsViewOptions): ChatsView {
   const store = $Store()
-  const lruCache = new helpers.LRUCache<ChatView>(10)
+  const lruChatViews = new helpers.LRUCache<ChatView>(10)
+  const lruAgentChatViews = new helpers.LRUCache<AgentChatView>(10)
   const el = h("div", { className: "chats" })
 
-  const lruCacheListener = lruCache.addListener("removed", function (chatView) {
+  const lruChatViewsUnsubscribe = lruChatViews.addListener("removed", function (chatView) {
+    chatView.dispose()
+  })
+
+  const lruAgentChatViewsUnsubscribe = lruAgentChatViews.addListener("removed", function (chatView) {
     chatView.dispose()
   })
 
   const storeListener = store.connect(function (state) {
     return {
+      selectedAgentId: state.selectedAgentId,
       selectedChatId: state.selectedChatId
     }
   }, render)
@@ -1188,44 +1214,41 @@ function createChatsView(options?: ChatsViewOptions): ChatsView {
   return self
 
   function dispose() {
-    lruCache.dispose()
-    lruCacheListener()
+    lruChatViews.dispose()
+    lruChatViewsUnsubscribe()
+
+    lruAgentChatViews.dispose()
+    lruAgentChatViewsUnsubscribe()
+
     storeListener()
     el.remove()
   }
 
   function render(props: {
+    selectedAgentId: string | null
     selectedChatId: string | null
   }) {
-    if (!props.selectedChatId) {
-      el.classList.add("chats--empty")
-    }
-    else {
-      el.classList.remove("chats--empty")
-    }
+    el.classList.toggle("chats--empty", !props.selectedChatId && !props.selectedAgentId)
+
+    lruChatViews.forEach(function (v) {
+      v.hide()
+    })
+
+    lruAgentChatViews.forEach(function (v) {
+      v.hide()
+    })
 
     if (props.selectedChatId) {
-      let chatView = getChatViewInstance(props.selectedChatId)
-
-      // hide other ChatViews
-      lruCache.forEach(function (v) {
-        if (v === chatView) {
-          v.show()
-        }
-        else {
-          v.hide()
-        }
-      })
+      getChatViewInstance(props.selectedChatId).show()
     }
-    else {
-      lruCache.forEach(function (v) {
-        v.hide()
-      })
+
+    if (props.selectedAgentId) {
+      getAgentChatViewInstance(props.selectedAgentId).show()
     }
   }
 
   function getChatViewInstance(chatId: string): ChatView {
-    let chatView = lruCache.get(chatId)
+    let chatView = lruChatViews.get(chatId)
 
     if (chatView) {
       return chatView
@@ -1235,7 +1258,23 @@ function createChatsView(options?: ChatsViewOptions): ChatsView {
 
     el.append(chatView.el)
 
-    lruCache.set(chatId, chatView)
+    lruChatViews.set(chatId, chatView)
+
+    return chatView
+  }
+
+  function getAgentChatViewInstance(agentId: string): AgentChatView {
+    let chatView = lruAgentChatViews.get(agentId)
+
+    if (chatView) {
+      return chatView
+    }
+
+    chatView = AgentChatView(agentId)
+
+    el.append(chatView.el)
+
+    lruAgentChatViews.set(agentId, chatView)
 
     return chatView
   }
@@ -1299,6 +1338,10 @@ function createChatView(options: ChatViewOptions) {
   }
 
   function hide() {
+    if (controller.visibleChatViewRef.current === self) {
+      controller.visibleChatViewRef.current = null!
+    }
+
     el.classList.add("hidden")
   }
 
@@ -1587,7 +1630,7 @@ function createChatBodyView(props: ChatBodyViewProps): ChatBodyView {
     const customer = helpers.getChatRecipient(chat.users)
     const dateLabels = helpers.getDataLabels(chatEntities)
 
-    list2<ChatEntity, {
+    list<ChatEntity, {
       message: Message<ChatEntity>
       dateEl: HTMLDivElement
     }>({
@@ -2228,7 +2271,7 @@ class ComposerActions extends helpers.TypedEventEmitter<ComposerActionsEvents> {
   protected render() {
     const that = this
 
-    list2<ComposerActionsListItem, { el: HTMLDivElement }>({
+    list<ComposerActionsListItem, { el: HTMLDivElement }>({
       target: this.listEl,
       values: this.props.items,
       key: d => d?.id,
@@ -3310,7 +3353,7 @@ function createCustomerDetailsView(props: DetailsViewProps): CustomerDetailsView
   }
 
   function renderDetailsItems(target: HTMLElement, details: DetailsItem[]) {
-    list2<DetailsItem, {
+    list<DetailsItem, {
       nameElRef: dom.Ref<HTMLDivElement>
       valueElRef: dom.Ref<HTMLDivElement>
     }>({
@@ -3659,7 +3702,7 @@ function createFileUploadModal(props: FileUploadModalProps) {
       return
     }
 
-    list2<File, {
+    list<File, {
       nameRef: dom.Ref<HTMLDivElement>
       sizeRef: dom.Ref<HTMLDivElement>
     }>({
@@ -4003,4 +4046,200 @@ function InstagramIcon(props?: IconProps) {
       d: "M320.3 205C256.8 204.8 205.2 256.2 205 319.7C204.8 383.2 256.2 434.8 319.7 435C383.2 435.2 434.8 383.8 435 320.3C435.2 256.8 383.8 205.2 320.3 205zM319.7 245.4C360.9 245.2 394.4 278.5 394.6 319.7C394.8 360.9 361.5 394.4 320.3 394.6C279.1 394.8 245.6 361.5 245.4 320.3C245.2 279.1 278.5 245.6 319.7 245.4zM413.1 200.3C413.1 185.5 425.1 173.5 439.9 173.5C454.7 173.5 466.7 185.5 466.7 200.3C466.7 215.1 454.7 227.1 439.9 227.1C425.1 227.1 413.1 215.1 413.1 200.3zM542.8 227.5C541.1 191.6 532.9 159.8 506.6 133.6C480.4 107.4 448.6 99.2 412.7 97.4C375.7 95.3 264.8 95.3 227.8 97.4C192 99.1 160.2 107.3 133.9 133.5C107.6 159.7 99.5 191.5 97.7 227.4C95.6 264.4 95.6 375.3 97.7 412.3C99.4 448.2 107.6 480 133.9 506.2C160.2 532.4 191.9 540.6 227.8 542.4C264.8 544.5 375.7 544.5 412.7 542.4C448.6 540.7 480.4 532.5 506.6 506.2C532.8 480 541 448.2 542.8 412.3C544.9 375.3 544.9 264.5 542.8 227.5zM495 452C487.2 471.6 472.1 486.7 452.4 494.6C422.9 506.3 352.9 503.6 320.3 503.6C287.7 503.6 217.6 506.2 188.2 494.6C168.6 486.8 153.5 471.7 145.6 452C133.9 422.5 136.6 352.5 136.6 319.9C136.6 287.3 134 217.2 145.6 187.8C153.4 168.2 168.5 153.1 188.2 145.2C217.7 133.5 287.7 136.2 320.3 136.2C352.9 136.2 423 133.6 452.4 145.2C472 153 487.1 168.1 495 187.8C506.7 217.3 504 287.3 504 319.9C504 352.5 506.7 422.6 495 452z"
     })
   )
+}
+
+type AgentListItem = ReturnType<typeof AgentListItem>
+
+function AgentListItem(agent: v35.conf.Agent, selected: boolean) {
+  const controller = $Controller()
+  const avatarRef = dom.createRef<AvatarView>()
+  const el = h("div", {
+    className: helpers.cx("chats-list-item", { selected }),
+    ariaPressed: String(selected),
+    onclick: function () {
+      controller.selectAgent(agent.id)
+    }
+  },
+    h("div", { className: "chat-list-item-avatar" },
+      AvatarView({
+        id: agent.id,
+        size: 36,
+        alt: agent.name,
+        src: agent.avatar_path,
+        ref: avatarRef,
+      }).el
+    ),
+    h("div", { className: "chat-item-caption" },
+      h("div", { className: "chat-item-title" }, agent.name),
+      h("div", { className: "chat-item-subtitle" }, agent.job_title || "")
+    )
+  )
+
+  return {
+    el,
+    update(agent: v35.conf.Agent, selected: boolean) {
+      el.classList.toggle("selected", selected)
+      el.ariaPressed = String(selected)
+      avatarRef.current.update({
+        id: agent.id,
+        size: 36,
+        alt: agent.name,
+        src: agent.avatar_path,
+      })
+    },
+    dispose: function () {
+      avatarRef.current.dispose()
+      avatarRef.current = null!
+      el.onclick = null!
+      el.remove()
+    }
+  }
+}
+
+export function AgentsChatsList() {
+  const controller = $Controller()
+  const emptyStateRef = dom.createRef<HTMLDivElement>()
+  const loaderRef = dom.createRef<HTMLDivElement>()
+  const errorRef = dom.createRef<HTMLDivElement>()
+  const errorMessageRef = dom.createRef<HTMLDivElement>()
+  const agentsListRef = dom.createRef<HTMLDivElement>()
+  const el = h("div", { className: "chats-list" },
+    h("div", { className: "p-4 text-center text-secondary", ref: emptyStateRef }, "No agents found."),
+    h("div", { className: "p-4 text-center text-secondary", ref: loaderRef }, "Loading agents…"),
+    h("div", { className: "p-4 text-center", ref: errorRef },
+      h("div", { ref: errorMessageRef }),
+      h("button", {
+        className: "btn btn-outline",
+        onclick() {
+          controller.maybeSyncAgents()
+        }
+      }, "Retry")
+    ),
+    h("div", { className: "agents-list", ref: agentsListRef }),
+  )
+  const disconnect = $Store().connect(function (state) {
+    return {
+      agents: state.agents,
+      agentsStatus: state.agentsStatus,
+      agentsError: state.agentsError,
+      routingStatuses: state.routingStatuses,
+      selectedAgentId: state.selectedAgentId,
+      myProfileId: state.myProfile?.id,
+    }
+  }, function render(props) {
+    dom.toggleEl(loaderRef.current, props.agentsStatus === "loading" || props.agentsStatus === "unknown")
+    dom.toggleEl(errorRef.current, props.agentsStatus === "error")
+    dom.toggleEl(emptyStateRef.current, props.agentsStatus === "loaded" && props.agents.length === 0)
+    dom.toggleEl(agentsListRef.current, props.agentsStatus === "loaded" && props.agents.length > 0)
+
+    const agents = helpers.sortAgents(props.agents, props.routingStatuses).filter(function(agent) {
+      return agent.id !== props.myProfileId
+    })
+
+    renderAgentsList(agents, props.selectedAgentId)
+
+    errorMessageRef.current.textContent = props.agentsError
+  })
+
+  function renderAgentsList(agents: v35.conf.Agent[], selectedAgentId: string | null) {
+    list<v35.conf.Agent, {
+      view: AgentListItem
+    }>({
+      target: agentsListRef.current,
+      values: agents,
+      key(agent) {
+        return agent.id
+      },
+      enter(ctx) {
+        ctx.view = AgentListItem(ctx.value, ctx.value.id === selectedAgentId)
+        ctx.el = ctx.view.el
+      },
+      update(ctx) {
+        ctx.view.update(ctx.value, ctx.value.id === selectedAgentId)
+      },
+      exit(ctx) {
+        ctx.view.dispose()
+        ctx.view = null!
+      },
+    })
+  }
+
+  return {
+    el,
+    dispose: function () {
+      disconnect()
+      emptyStateRef.current = null!
+      loaderRef.current = null!
+      errorRef.current = null!
+      errorMessageRef.current = null!
+      agentsListRef.current = null!
+      el.remove()
+    }
+  }
+}
+
+export type AgentChatView = ReturnType<typeof AgentChatView>
+
+export function AgentChatView(agentId: string) {
+  const avatarRef = dom.createRef<AvatarView>()
+  const titleRef = dom.createRef<HTMLDivElement>()
+  const subtitleRef = dom.createRef<HTMLDivElement>()
+  const el = h("div", { className: "chat" },
+    h("div", { className: "chat-feed" },
+      h("div", { className: "chat-header" },
+        h("div", { className: "chat-header-avatar" },
+          AvatarView({
+            id: agentId,
+            size: 36,
+            alt: agentId,
+            ref: avatarRef,
+          }).el
+        ),
+        h("div", { className: "chat-header-details" },
+          h("div", { className: "text-primary text-ellipsis", ref: titleRef }, agentId),
+          h("div", { className: "text-secondary text-ellipsis", ref: subtitleRef }, agentId)
+        )
+      ),
+      h("div", { className: "chat-body" },
+        h("div", { className: "sticky-center" }, "Private conversations between agents are coming soon.")
+      )
+    )
+  )
+
+  const disconnect = $Store().connect(function (state) {
+    return {
+      agents: state.agents,
+    }
+  }, function (props) {
+    const agent = props.agents.find(function (agent) {
+      return agent.id === agentId
+    })
+
+    if (agent) {
+      titleRef.current.textContent = agent.name;
+      subtitleRef.current.textContent = agent.job_title || ""
+      avatarRef.current.update({
+        id: agent.id,
+        size: 36,
+        alt: agent.name,
+        src: agent.avatar_path,
+      })
+    }
+  })
+
+  return {
+    el,
+    dispose: function () {
+      disconnect()
+      avatarRef.current.dispose()
+      avatarRef.current = null!
+      el.remove()
+    },
+    hide() {
+      el.classList.add("hidden")
+    },
+    show() {
+      el.classList.remove("hidden")
+    }
+  }
 }

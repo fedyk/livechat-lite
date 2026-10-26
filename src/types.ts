@@ -17,7 +17,14 @@ export interface Subscriber<T> {
 
 export type Unsubscriber = () => void;
 
-export type ChatFolder = "all" | "my" | "supervised" | "queued" | "unassigned" | "archived"
+export type ChatFolder =
+  | "all"
+  | "my"
+  | "supervised"
+  | "queued"
+  | "unassigned"
+  | "archived"
+  | "agents"
 
 export type ArchivedChatsStatus = "unknown" | "up" | "fail" | "fetching" | "fetching-more"
 

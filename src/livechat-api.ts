@@ -3178,13 +3178,14 @@ export namespace v35 {
      */
 
     interface listAgents$Payload {
+      fields?: "job_title"[]
       filters?: {
         group_ids?: number[]
       }
     }
 
     export function listAgents(accessToken: string, payload: listAgents$Payload, signal: AbortSignal) {
-      return fetch("https://api.livechatinc.com/v3.5/configuration/action/list_agents", {
+      return fetch("https://api.livechatinc.com/v3.6/configuration/action/list_agents", {
         headers: getRequestHeaders(accessToken),
         method: "POST",
         body: JSON.stringify(payload),

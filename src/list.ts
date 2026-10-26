@@ -54,27 +54,27 @@ function createContext<Value, Extends, Context = Extends & BaseContext<Value>>(
   return context
 }
 
-export function list2<Value, Extends = DefaultExtend>(options: {
+export function list<Value, ExtraContext = DefaultExtend>(options: {
   target: Element
   values: Value[]
   key(value: Value, index: number): string
-  enter(ctx: Extends & BaseContext<Value>): void
-  update(ctx: Extends & BaseContext<Value>): void
-  exit(ctx: Extends & BaseContext<Value>): void
+  enter(ctx: ExtraContext & BaseContext<Value>): void
+  update(ctx: ExtraContext & BaseContext<Value>): void
+  exit(ctx: ExtraContext & BaseContext<Value>): void
 }) {
   const parent = options.target
   const data = options.values
-  const group = new Array<ElementWithContext<Extends & BaseContext<Value>>>(parent.children.length)
+  const group = new Array<ElementWithContext<ExtraContext & BaseContext<Value>>>(parent.children.length)
   const groupLength = group.length
   const dataLength = data.length
-  const enterGroup = new Array<Extends & BaseContext<Value>>(dataLength)
-  const updateGroup = new Array<ElementWithContext<Extends & BaseContext<Value>>>(dataLength)
-  const exitGroup = new Array<ElementWithContext<Extends & BaseContext<Value>>>(groupLength)
+  const enterGroup = new Array<ExtraContext & BaseContext<Value>>(dataLength)
+  const updateGroup = new Array<ElementWithContext<ExtraContext & BaseContext<Value>>>(dataLength)
+  const exitGroup = new Array<ElementWithContext<ExtraContext & BaseContext<Value>>>(groupLength)
   const nodeByKeyValue = new Map
   const keyValues = new Array(groupLength)
   let i: number
   let el: Element
-  let node: ElementWithContext<Extends & BaseContext<Value>>
+  let node: ElementWithContext<ExtraContext & BaseContext<Value>>
   let keyValue: string
 
   // copy children
@@ -82,7 +82,7 @@ export function list2<Value, Extends = DefaultExtend>(options: {
     el = parent.children[i]
 
     if (el instanceof HTMLElement) {
-      group[i] = el as ElementWithContext<Extends & BaseContext<Value>>
+      group[i] = el as ElementWithContext<ExtraContext & BaseContext<Value>>
     }
   }
 

@@ -184,7 +184,8 @@ a {
   justify-content: space-between;
 }
 
-.align-items-center {
+.align-items-center,
+.align-center {
   align-items: center;
 }
 
@@ -214,6 +215,10 @@ a {
 
 .mw-0 {
   min-width: 0;
+}
+
+.w-100p {
+  width: 100%;
 }
 
 .p-0 {
@@ -615,11 +620,12 @@ input.switch-checkbox:checked+label.switch-label:after {
   position: relative;
   display: flex;
   flex-direction: row;
-  cursor: pointer;
   padding: 14px;
   will-change: background-color;
   transition: background-color 0.1s ease-in-out;
   color: var(--main-text-color);
+  text-align: center;
+  cursor: pointer;
 }
 
 .chats-list-item:hover {
