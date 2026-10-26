@@ -2095,11 +2095,11 @@ export namespace v35 {
                 image: el.image ? {
                   name: el.image.name || "",
                   url: el.image.url,
-                  contentType: String(el.image.content_type ?? ""),
+                  content_type: String(el.image.content_type ?? ""),
                   size: el.image.size,
                   width: el.image.width,
                   height: el.image.height,
-                  alternativeText: String(el.image.alternative_text ?? ""),
+                  alternative_text: String(el.image.alternative_text ?? ""),
                 } : void 0,
                 buttons: Array.isArray(el.buttons) ? el.buttons.map(function (button: any) {
                   return {

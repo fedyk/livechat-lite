@@ -1621,3 +1621,15 @@ export function getDataLabels(chatEntities: ChatEntity[]) {
     }).format(message.created_at)
   })
 }
+
+export function getFileContentType(file: {
+  name: string;
+  content_type: string
+}): string {
+  // Some attachment sources report WebM as a generic binary file.
+  if (/\.webm$/i.test(file.name.trim())) {
+    return "video/webm"
+  }
+
+  return file.content_type.trim().toLowerCase()
+}

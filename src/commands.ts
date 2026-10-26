@@ -177,6 +177,12 @@ export function createCommandsView() {
       return
     }
 
+    const state = $Store().getState()
+
+    if (state.mediaPreview) {
+      return
+    }
+
     const isEscapeEvent = event.key === ESCAPE_KEY
     const isEnterEvent = event.key === ENTER_KEY
     const isUpOrDownEvent = event.key === ARROW_UP_KEY || event.key === ARROW_DOWN_KEY
@@ -307,8 +313,8 @@ function createCommandView(props: ICommandViewProps) {
 
   const el = h("div", { className: "command-item" },
     h("div", { className: "command-name" },
-      h("div", { className: "", ref: title}),
-      h("div", { className: "text-secondary", ref: subtitle})
+      h("div", { className: "", ref: title }),
+      h("div", { className: "text-secondary", ref: subtitle })
     )
   )
 
@@ -408,7 +414,7 @@ function getCommands(): ICommand[] {
   if (routingToggleCommand) {
     commands.push(routingToggleCommand)
   }
-  
+
   commands.push(createColorModeCommand())
 
   return commands

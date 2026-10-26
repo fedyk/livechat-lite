@@ -106,3 +106,12 @@ export interface CannedResponse {
   tags: string[]
   text: string
 }
+
+/** Transient global media preview, independent of the upload modal. */
+export interface MediaPreview {
+  kind: "image" | "video"
+  src: string
+  name: string
+  alt?: string
+  inlineVideo?: HTMLVideoElement
+}

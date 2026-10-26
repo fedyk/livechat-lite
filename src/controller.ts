@@ -1182,6 +1182,9 @@ export function createController(options: ControllerOptions) {
             return {
               ...event,
               id: event_id,
+              url,
+              thumbnail_url: url,
+              thumbnail2x_url: url,
             }
           })
 
@@ -2131,6 +2134,10 @@ export function createController(options: ControllerOptions) {
     const state = store.getState()
 
     if (!state.selectedChatId) {
+      return
+    }
+
+    if (state.mediaPreview) {
       return
     }
 

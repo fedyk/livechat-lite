@@ -69,6 +69,7 @@ export interface State {
 
   colorMode: t.ColorMode
   openModal: t.Modal | null
+  mediaPreview: t.MediaPreview | null
 
   showDetailsSection: boolean
 }
@@ -94,12 +95,13 @@ export interface StoreConnectMapper<Props> {
   (state: State): Props
 }
 
-export function createStore(initialState: Pick<State, "credentials" | "searchRecentQueries">) {
+export function createStore(initialState: Partial<State>) {
   const subscribers = new Set<StoreSubscriber<State>>()
   const lazySubscribers = new Set<StoreSubscriber<State>>()
   let digestTimeout = 0
   let isDispatching = false
   let state: State = {
+    credentials: null,
     chats: new Map(),
     license: null,
     myProfile: null,
@@ -143,9 +145,11 @@ export function createStore(initialState: Pick<State, "credentials" | "searchRec
     searchNextPageId: null,
     searchFoundChats: null,
     searchErrorMessage: "",
+    searchRecentQueries: [],
     parsedUserAgents: {},
     colorMode: "auto",
     openModal: null,
+    mediaPreview: null,
     showDetailsSection: true,
     ...initialState
   }

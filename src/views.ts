@@ -20,6 +20,7 @@ import { v35 } from "./livechat-api.js"
 import { $CommandsController, createCommandsView } from "./commands.js"
 import type { CannedResponse, Unsubscriber } from "./types.js"
 import { BaseContext, ElementWithContext, list2 } from "./list.js"
+import { createMediaViewer, openMediaPreview } from "./media-viewer.js"
 import type {
   ArchivedChatsStatus,
   ChatEntity,
@@ -42,8 +43,14 @@ export function createAppView() {
   const commands = createCommandsView()
   const commandsController = $CommandsController()
   const modalsView = createModalsView()
+  const mediaViewer = createMediaViewer()
 
-  el.append(mainScreen.el, commands.el, modalsView.el)
+  el.append(
+    mainScreen.el,
+    commands.el,
+    modalsView.el,
+    mediaViewer.el
+  )
 
   commandsController.onshow = commands.show
 
@@ -57,6 +64,7 @@ export function createAppView() {
     commands.dispose()
     commandsController.onshow = null!
     commandsController.dispose()
+    mediaViewer.dispose()
     modalsView.dispose()
     el.remove()
   }
@@ -75,7 +83,7 @@ function createMainScreen() {
     h("div", { className: "sidebar", ref: sidebarElRef },
       createMainHeaderView({ ref: mainHeaderRef }).el,
       createChatFoldersView({ ref: chatFoldersRef }).el,
-      createChatListView({ ref: chatListRef }).el,
+      ChatListView({ ref: chatListRef }).el,
       createChatSearchResultsView({ ref: chatSearchResultsRef }).el,
     ),
     h("div", { className: "content", ref: mainElRef },
@@ -562,7 +570,7 @@ interface ChatListViewOptions {
   ref: dom.Ref<ChatListView>
 }
 
-function createChatListView(options: ChatListViewOptions): ChatListView {
+function ChatListView(options: ChatListViewOptions): ChatListView {
   const controller = $Controller()
   const el = h("div", { className: "chats-lists" })
   const emptyStateEl = h("div", { className: "chats-list-empty hidden" }, "Nothing interesting here yet...")
@@ -2335,6 +2343,7 @@ function TextMessage(props: MessageViewProps<v35.agent.MessageEvent>): Message<v
         id: props.author.id,
         alt: props.author.name,
         src: props.author.avatar,
+        preview: true,
         size: 36,
         ref: avatarRef
       }).el
@@ -2410,6 +2419,7 @@ function FileMessage(props: MessageViewProps<v35.agent.FileEvent>): Message<v35.
           id: props.author.id,
           alt: props.author.name,
           src: props.author.avatar,
+          preview: true,
           size: 36,
           ref: avatarViewRef
         }).el
@@ -2417,23 +2427,37 @@ function FileMessage(props: MessageViewProps<v35.agent.FileEvent>): Message<v35.
     )
   }
 
-  if (["image/png", "image/jpg", "image/jpeg", "image/gif"].includes(props.message.content_type)) {
+  if (helpers.getFileContentType(props.message).startsWith("image/")) {
     const width = 280
     let height = 300
 
-    if (typeof props.message.width === "number" && typeof props.message.height === "number") {
+    if (
+      typeof props.message.width === "number" &&
+      typeof props.message.height === "number" &&
+      props.message.width > 0 &&
+      props.message.height > 0
+    ) {
       height = width * props.message.height / props.message.width
     }
 
     el.append(h("div", {
       className: "message-image-container"
-    }, h("img", {
-      className: "message-image",
-      src: props.message.thumbnail2x_url,
-      alt: props.message.name,
-      width,
-      height,
-    }),
+    },
+      h("img", {
+        className: "message-image",
+        tabIndex: 0,
+        onclick: previewAttachment,
+        onkeydown: function (event: KeyboardEvent) {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault()
+            previewAttachment()
+          }
+        },
+        src: props.message.thumbnail2x_url,
+        alt: props.message.name,
+        width,
+        height,
+      }),
       MessageIndicator({
         sticky: true,
         contrast: true,
@@ -2454,22 +2478,36 @@ function FileMessage(props: MessageViewProps<v35.agent.FileEvent>): Message<v35.
       )
     ))
   }
-  else if (props.message.content_type.startsWith("video/")) {
+  else if (helpers.getFileContentType(props.message).startsWith("video/")) {
     el.append(h("div", {
       className: "message-image-container"
     },
       h("video", {
         className: "message-video",
+        autoplay: true,
+        muted: true,
+        playsInline: true,
         width: 280,
         height: 280,
-        controls: true,
       },
         h("source", {
-          type: props.message.content_type,
+          type: helpers.getFileContentType(props.message),
           src: props.message.url,
         }),
-        h("p", {}, "Your browser does not support the video. ", h("a", { href: props.message.url, download: props.message.name }, "Download")),
+        h("p", {},
+          "Your browser does not support the video. ",
+          h("a", {
+            href: props.message.url,
+            download: props.message.name
+          }, "Download")
+        ),
       ),
+      h("button", {
+        className: "message-video-overlay",
+        type: "button",
+        ariaLabel: `Preview video: ${props.message.name}`,
+        onclick: previewAttachment,
+      }),
       MessageIndicator({
         sticky: true,
         contrast: true,
@@ -2527,6 +2565,11 @@ function FileMessage(props: MessageViewProps<v35.agent.FileEvent>): Message<v35.
     progressSignal.onprogress = updateProgressStatus
   }
 
+  el.querySelector(".message-image")?.setAttribute("role", "button")
+  el.querySelector(".message-image")?.setAttribute(
+    "aria-label",
+    `Preview ${props.message.name}`
+  )
   toggleProgress(Boolean(props.progressSignal))
 
   return { el, dispose, update, highlight }
@@ -2559,6 +2602,36 @@ function FileMessage(props: MessageViewProps<v35.agent.FileEvent>): Message<v35.
     el.remove()
   }
 
+  function previewAttachment() {
+    if (props.progressSignal) {
+      return
+    }
+
+    if (props.message.url.startsWith("blob:")) {
+      return
+    }
+
+    if (props.messageStatus === "failed") {
+      return
+    }
+
+    if (props.messageStatus === "sending") {
+      return
+    }
+
+    const kind = helpers.getFileContentType(props.message).startsWith("video/")
+      ? "video"
+      : "image"
+
+    openMediaPreview({
+      kind,
+      src: props.message.url,
+      name: props.message.name,
+      alt: props.message.alternative_text || props.message.name,
+      inlineVideo: el.querySelector("video") || undefined,
+    })
+  }
+
   function update(nextProps: MessageViewProps<v35.agent.FileEvent>) {
     if (messageIndicatorRef.current) {
       messageIndicatorRef.current.update({
@@ -2581,7 +2654,25 @@ function FileMessage(props: MessageViewProps<v35.agent.FileEvent>): Message<v35.
       toggleProgress(true)
     }
 
+    if (
+      props.message.url !== nextProps.message.url ||
+      props.message.thumbnail2x_url !== nextProps.message.thumbnail2x_url
+    ) {
+      const img = el.querySelector<HTMLImageElement>(".message-image")
+
+      if (img) {
+        img.src = nextProps.message.thumbnail2x_url || nextProps.message.url
+      }
+
+      const video = el.querySelector("video")
+
+      if (video) {
+        video.src = nextProps.message.url
+        video.load()
+      }
+    }
     props = nextProps
+    toggleProgress(Boolean(props.progressSignal))
   }
 
   function highlight() { }
@@ -2602,6 +2693,21 @@ function FileMessage(props: MessageViewProps<v35.agent.FileEvent>): Message<v35.
   }
 
   function toggleProgress(on: boolean) {
+    const img = el.querySelector<HTMLImageElement>(".message-image")
+    const expand = el.querySelector<HTMLButtonElement>(".message-video-overlay")
+    const disabled = on ||
+      props.message.url.startsWith("blob:") ||
+      props.messageStatus === "failed"
+
+    if (img) {
+      img.tabIndex = disabled ? -1 : 0
+      img.setAttribute("aria-disabled", String(disabled))
+    }
+
+    if (expand) {
+      expand.disabled = disabled
+    }
+
     if (imageProgressContainer.current) {
       imageProgressContainer.current.classList.toggle("hidden", !on)
     }
@@ -2635,6 +2741,7 @@ function RichMessageMessage(props: MessageViewProps<v35.agent.RichMessageEvent>)
           id: props.author.id,
           alt: props.author.name,
           src: props.author.avatar,
+          preview: true,
           size: 36,
           ref: avatarViewRef
         }).el
@@ -2681,6 +2788,27 @@ function RichMessageMessage(props: MessageViewProps<v35.agent.RichMessageEvent>)
             element.image && h("div", { className: "message-card-img-container" },
               h("img", {
                 className: "message-card-img",
+                role: "button",
+                tabIndex: 0,
+                onclick: function () {
+                  openMediaPreview({
+                    kind: "image",
+                    src: element.image!.url,
+                    name: element.image!.name || "Image",
+                    alt: element.image!.alternative_text
+                  })
+                },
+                onkeydown: function (event: KeyboardEvent) {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault()
+                    openMediaPreview({
+                      kind: "image",
+                      src: element.image!.url,
+                      name: element.image!.name || "Image",
+                      alt: element.image!.alternative_text
+                    })
+                  }
+                },
                 src: element.image.url,
                 alt: element.image.alternative_text
               })
@@ -2751,6 +2879,7 @@ function FilledFormMessage(props: MessageViewProps<v35.agent.FilledFormEvent>): 
         id: props.author.id,
         alt: props.author.name,
         src: props.author.avatar,
+        preview: true,
         size: 36,
         ref: avatarViewRef
       }).el
@@ -2866,6 +2995,7 @@ function SneakPeekMessage(props: MessageViewProps<SneakPeekAsEvent>): Message<Sn
         id: props.author.id,
         alt: props.author.name,
         src: props.author.avatar,
+        preview: true,
         size: 36,
         ref: avatarViewRef
       }).el
@@ -3226,6 +3356,7 @@ export interface AvatarViewProps {
   size: number,
   alt: string,
   src?: string
+  preview?: boolean
   badge?: "accepting_chats" | "not_accepting_chats" | "offline"
 }
 
@@ -3248,6 +3379,33 @@ export function AvatarView(props: AvatarViewProps & {
     h("div", { className: "avatar-badge", ref: badgeElRef })
   )
 
+  el.addEventListener("click", onPreview)
+  el.addEventListener("keydown", onPreviewKey)
+
+  function onPreview() {
+    const img = imgElRef.current
+
+    if (
+      el.getAttribute("role") === "button" &&
+      img?.getAttribute("src") &&
+      !hasImageError
+    ) {
+      openMediaPreview({
+        kind: "image",
+        src: img.src,
+        name: img.alt,
+        alt: img.alt
+      })
+    }
+  }
+
+  function onPreviewKey(event: KeyboardEvent) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault()
+      onPreview()
+    }
+  }
+
   let hasValidImage = false
   let hasImageError = false
   imgElRef.current.onload = onImgLoad
@@ -3268,6 +3426,8 @@ export function AvatarView(props: AvatarViewProps & {
   return avatarView
 
   function dispose() {
+    el.removeEventListener("click", onPreview)
+    el.removeEventListener("keydown", onPreviewKey)
     imgElRef.current.onload = null
     imgElRef.current.onerror = null
     imageElRef.current = null!
@@ -3289,6 +3449,17 @@ export function AvatarView(props: AvatarViewProps & {
     imgElRef.current.alt = props.alt
 
     const nextSrc = props.src || ""
+    const previewEnabled = Boolean(props.preview && nextSrc)
+    el.tabIndex = previewEnabled ? 0 : -1
+
+    if (previewEnabled) {
+      el.setAttribute("role", "button")
+      el.setAttribute("aria-label", `Preview ${props.alt}`)
+    }
+    else {
+      el.removeAttribute("role")
+      el.removeAttribute("aria-label")
+    }
     const currentSrc = imgElRef.current.getAttribute("src") || ""
     if (currentSrc !== nextSrc) {
       hasValidImage = false
@@ -3402,7 +3573,10 @@ function createModalsView() {
   }
 
   function update(openModal: Modal | null) {
-    document.body.classList.toggle("overflow-hidden", Boolean(openModal))
+    document.body.classList.toggle(
+      "overflow-hidden",
+      Boolean(openModal || store.getState().mediaPreview)
+    )
 
 
     if (openModal?.type === "file-upload-modal") {
